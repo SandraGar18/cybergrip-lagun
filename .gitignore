@@ -1,0 +1,8 @@
+# Modelos entrenados (pesan ~190 MB, GitHub no admite más de 100 MB por archivo)
+*.zip
+*.safetensors
+entrenamientos/
+outputs/
+# Claves
+.env
+*.key
