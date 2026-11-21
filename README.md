@@ -43,9 +43,9 @@ Grabados con SenseCraft Robotics (brazo líder + seguidor SO-101, 2 cámaras, 30
 | Pieza | Dataset | Episodios |
 |---|---|---|
 | Azul | `leibar0304/database_azul` | 37 |
-| Rojo | `leibar0304/database_rojo` | ~40 |
+| Rojo | `leibar0304/database_rojo` → `database_rojo_final` | ~40 → 40 |
 | Verde | [`leibar0304/database_verde`](https://huggingface.co/datasets/leibar0304/database_verde) | 36 (10 min 31 s) |
-| Negro | [`leibar0304/database_negro`](https://huggingface.co/datasets/leibar0304/database_negro) + [`database_negro_v2`](https://huggingface.co/datasets/leibar0304/database_negro_v2) | ~40 + 20 |
+| Negro | [`leibar0304/database_negro`](https://huggingface.co/datasets/leibar0304/database_negro) + [`database_negro_v2`](https://huggingface.co/datasets/leibar0304/database_negro_v2) → `database_negro_final` | ~40 + 20 → final |
 
 > Revisad que los nombres y números de episodios coinciden con los de vuestra cuenta antes de entregar.
 
@@ -55,12 +55,14 @@ Grabados con SenseCraft Robotics (brazo líder + seguidor SO-101, 2 cámaras, 30
 |---|---|---|---|---|
 | Azul | RTX 4070 Laptop (local, WSL) | 20 000 | 0,107 | Funciona bien |
 | Verde | RTX 4070 Laptop (local, WSL) | 40 000 | 0,108 | ~8,4 epochs, 1 h 37 min |
-| Rojo | SenseCraft Cloud | 40 000 | 0,205 | |
-| Negro v2 | SenseCraft Cloud (RTX 5090) | 50 000 | 0,192 | 6 de 10 aciertos en pruebas |
+| Rojo v1 | SenseCraft Cloud | 40 000 | 0,205 | Primera versión |
+| Negro v2 | SenseCraft Cloud (RTX 5090 D) | 50 000 | 0,192 | 6 de 10 aciertos en pruebas |
+| **Rojo final** | SenseCraft Cloud (RTX 5090 D) | 40 000 | **0,189** | Nuevo dataset de 40 episodios; mejora al rojo anterior (0,205) |
+| **Negro final** | SenseCraft Cloud (RTX 5090 D) | 40 000 | — | Nuevo dataset tras los fallos del negro v2 |
 
 **Lo que aprendimos iterando:**
 - **Pasos y epochs.** epochs ≈ pasos × batch ÷ frames del dataset. Con pocos episodios, subir los pasos (20 000 → 40 000) dio modelos más estables; apuntamos a unas 8-11 epochs.
-- **El negro fue el difícil.** Grabamos 20 episodios más y un reentreno corto (15 000 pasos) salió peor. Lo reentrenamos con más pasos y comparamos modelos con 10 intentos reales cada uno, porque el loss de la nube y el local no son comparables.
+- **El negro fue el difícil.** Grabamos 20 episodios más y un reentreno corto (15 000 pasos) salió peor. Lo reentrenamos con más pasos y comparamos modelos con 10 intentos reales cada uno, porque el loss de la nube y el local no son comparables. Al final grabamos datasets nuevos y más consistentes para el rojo y el negro (`*_final`, 40 episodios) y los entrenamos a 40 000 pasos.
 - **El robot no sabe cuándo parar.** ACT repite lo que vio (~17 s por episodio); si le dejas más tiempo, improvisa. La app corta el modelo al terminar y tiene un botón «Pieza entregada».
 - **Cámaras en WSL:** con usbipd los frames MJPEG llegaban corruptos, así que grabamos en Windows con SenseCraft y entrenamos en WSL con la GPU.
 
