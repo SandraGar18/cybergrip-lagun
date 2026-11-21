@@ -1,4 +1,5 @@
-﻿# Genera con ElevenLabs (voz Tornillo) un audio por cada frase de Lagun.
+﻿param([string]$Key = $env:ELEVEN_KEY)
+# Genera con ElevenLabs (voz Tornillo) un audio por cada frase de Lagun.
 # Uso (PowerShell):  powershell -ExecutionPolicy Bypass -File "$HOME\Desktop\generar_voz.ps1"
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -6,8 +7,9 @@ $Dir   = Join-Path $HOME "Desktop\voz"
 $List  = Join-Path $Dir "frases.tsv"
 $Voice = "FJIJVGvTEAr0aX5Hnpxe"   # Tornillo
 if (-not (Test-Path $List)) { Write-Host "No encuentro $List"; exit 1 }
-$sec = Read-Host "Pega tu API key de ElevenLabs" -AsSecureString
-$Key = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+if (-not $Key) { $Key = Read-Host "Pega tu API key de ElevenLabs (clic derecho para pegar) y pulsa Enter" }
+$Key = "$Key".Trim()
+if (-not $Key.StartsWith("sk_")) { Write-Host "La clave no se ha pegado bien (debe empezar por sk_). Vuelve a lanzar el script." -ForegroundColor Red; exit 1 }
 $lines = Get-Content -Path $List -Encoding UTF8 | Where-Object { $_ -match "`t" }
 $ok = 0; $skip = 0; $fail = 0; $i = 0
 foreach ($line in $lines) {
@@ -27,6 +29,7 @@ foreach ($line in $lines) {
     Write-Host $_.Exception.Message -ForegroundColor Red
     if (Test-Path $out) { Remove-Item $out }
     if ($_.Exception.Message -match "401|404") { Write-Host "Revisa la API key (401) o el Voice ID (404)."; break }
+    if ($fail -ge 3 -and $ok -eq 0) { Write-Host "Fallan todas: paro aqui. Mandame el mensaje de error en rojo."; break }
   }
 }
 Write-Host ""
