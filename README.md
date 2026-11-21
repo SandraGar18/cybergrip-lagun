@@ -103,7 +103,7 @@ Las frases de Lagun están en `app/voz/frases.tsv`. Con una cuenta de ElevenLabs
 
 - Pedidos por **voz** (Web Speech API), botón o teclado, con cola de pedidos.
 - **Lagun**: asistente con cara animada que entiende peticiones por intención («algo para medir distancias» → sensores), se presenta y cuenta cómo aprendió.
-- **Kits de montaje**: seguidor de línea, brazo robótico y estación meteorológica.
+- **Kits de montaje** que cambian con la temática (almacén, farmacia, laboratorio, colores).
 - **Parada de emergencia** (Esc / «para»), stock, historial con ✅/❌, tasa de éxito y tiempo medio, exportación CSV.
 - Modo claro / oscuro y 4 temáticas.
 

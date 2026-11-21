@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PickBot · Asistente de pedidos SO-101</title>
+<title>Lagun · Asistente de pedidos SO-101</title>
 <style>
   :root {
     --bg:#0b1020; --panel:#141b2e; --panel2:#1b2440; --line:#2a3557; --text:#e8edf7; --muted:#93a0bd;
@@ -119,8 +119,9 @@
   .row { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; font-size:14px; color:var(--muted); }
   pre { white-space:pre-wrap; font-size:12px; color:var(--muted); max-height:160px; overflow:auto; background:var(--bg); padding:8px; border-radius:8px; }
   a { color:#93c5fd; }
-  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#111827; border:1px solid var(--line); padding:12px 18px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.4); opacity:0; transition:opacity .3s; pointer-events:none; font-size:15px; }
-  .toast.show { opacity:1; }
+  .toast { position:fixed; left:50%; top:14px; bottom:auto; transform:translate(-50%,-8px); z-index:50; max-width:min(440px,90vw); font-size:14px !important; background:#111827; border:1px solid var(--line); padding:12px 18px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.4); opacity:0; transition:opacity .3s; pointer-events:none; font-size:15px; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  .toast { transition:opacity .3s, transform .3s; }
 
   /* ===== Rediseño ===== */
   body { background:
@@ -453,6 +454,11 @@
   body[data-skin="neonclaro"] .card, body[data-skin="neonclaro"] .stat, body[data-skin="neonclaro"] .kit { border:1.5px solid #CBD0E6; }
 
   .btn.done { width:100%; font-size:17px; padding:14px; margin-bottom:10px; color:#fff; background:linear-gradient(135deg,#22c55e,#15803d); box-shadow:0 8px 20px rgba(34,197,94,.3); }
+
+  .notice { min-height:22px; font-size:14px; font-weight:600; color:var(--muted); opacity:0; transition:opacity .3s; text-align:center; }
+  .notice.show { opacity:1; color:var(--text); }
+  .toast { display:none !important; }
+  .kit.running[disabled] { opacity:1; }
 </style>
 </head>
 <body>
@@ -499,6 +505,7 @@
           </div>
         </div>
         <div class="bar"><div id="bar"></div></div>
+        <div class="notice" id="notice"></div>
         <button class="btn done hidden" id="done">✅ PIEZA ENTREGADA <span class="kbd">Enter</span></button>
         <button class="btn stop" id="stop">⏹ PARAR ROBOT <span class="kbd">Esc</span></button>
         <button class="btn mic hidden" id="mic">🎤</button>
@@ -567,24 +574,51 @@ const COLORS = [
   { key:"negro", label:"Negro", dot:"#64748b", words:["negro","negra","black"] },
 ];
 const THEMES = {
-  almacen:    { name:"Almacén de robótica", title:"PickBot · Almacén de componentes", sub:"Un brazo robótico que aprende por imitación y prepara pedidos de componentes de robótica",
+  almacen:    { name:"Almacén de robótica", title:"Lagun · Almacén de componentes", sub:"Un brazo robótico que aprende por imitación y prepara pedidos de componentes de robótica",
                 items:{ azul:["📡","Sensores"], rojo:["⚙️","Servomotores"], verde:["🔋","Baterías"], negro:["💾","Microprocesadores"] } },
-  farmacia:   { name:"Farmacia / hospital", title:"PickBot · Farmacia hospitalaria", sub:"El robot prepara la medicación que pide el personal sanitario",
+  farmacia:   { name:"Farmacia / hospital", title:"Lagun · Farmacia hospitalaria", sub:"El robot prepara la medicación que pide el personal sanitario",
                 items:{ azul:["💊","Analgésicos"], rojo:["🩸","Antibióticos"], verde:["🌿","Antiinflamatorios"], negro:["🧴","Material de curas"] } },
-  laboratorio:{ name:"Laboratorio", title:"PickBot · Laboratorio", sub:"Manipulación de muestras sin contacto humano",
+  laboratorio:{ name:"Laboratorio", title:"Lagun · Laboratorio", sub:"Un brazo robótico que prepara muestras y reactivos para el laboratorio",
                 items:{ azul:["🧪","Muestra A"], rojo:["🧬","Muestra B"], verde:["🔬","Muestra C"], negro:["⚗️","Reactivo"] } },
-  colores:    { name:"Solo colores", title:"PickBot", sub:"Clasificación de piezas por color",
+  colores:    { name:"Solo colores", title:"Lagun · Clasificación por colores", sub:"Un brazo robótico que aprende por imitación y clasifica piezas por color",
                 items:{ azul:["🟦","Pieza azul"], rojo:["🟥","Pieza roja"], verde:["🟩","Pieza verde"], negro:["⬛","Pieza negra"] } },
 };
 
-const KITS = [
-  { id:"seguidor", icon:"🚗", name:"Kit robot seguidor de línea", desc:"Sensores de suelo, motores, batería y controlador.",
-    words:["seguidor","línea","linea","coche"], parts:["azul","rojo","verde","negro"] },
-  { id:"brazo", icon:"🦾", name:"Kit brazo robótico", desc:"Articulaciones con servomotores y su controlador.",
-    words:["brazo"], parts:["rojo","negro","verde"] },
-  { id:"meteo", icon:"🌦️", name:"Kit estación meteorológica", desc:"Sensores ambientales con su placa y alimentación.",
-    words:["meteo","meteorológica","meteorologica","estación","estacion"], parts:["azul","negro","verde"] },
-];
+const THEME_KITS = {
+  almacen: [
+    { id:"seguidor", icon:"🚗", name:"Kit robot seguidor de línea", desc:"Sensores de suelo, motores, batería y controlador.",
+      words:["seguidor","línea","linea","coche"], parts:["azul","rojo","verde","negro"] },
+    { id:"brazo", icon:"🦾", name:"Kit brazo robótico", desc:"Articulaciones con servomotores y su controlador.",
+      words:["brazo"], parts:["rojo","negro","verde"] },
+    { id:"meteo", icon:"🌦️", name:"Kit estación meteorológica", desc:"Sensores ambientales con su placa y alimentación.",
+      words:["meteo","meteorológica","meteorologica","estación","estacion"], parts:["azul","negro","verde"] },
+  ],
+  farmacia: [
+    { id:"urgencias", icon:"🚑", name:"Botiquín de urgencias", desc:"Lo básico para atender una urgencia en planta.",
+      words:["urgencia","urgencias","botiquin","botiquín"], parts:["azul","rojo","negro"] },
+    { id:"curas", icon:"🩹", name:"Kit de curas", desc:"Material de curas, antiinflamatorio y analgésico.",
+      words:["curas","cura","herida"], parts:["negro","verde","azul"] },
+    { id:"postop", icon:"🛏️", name:"Kit post-operatorio", desc:"Medicación para después de una operación.",
+      words:["operatorio","postoperatorio","operacion","operación"], parts:["rojo","azul","verde"] },
+  ],
+  laboratorio: [
+    { id:"sangre", icon:"🩸", name:"Kit análisis de sangre", desc:"Muestras y reactivo para un análisis completo.",
+      words:["sangre","analisis","análisis","analitica","analítica"], parts:["azul","rojo","negro"] },
+    { id:"adn", icon:"🧬", name:"Kit PCR / ADN", desc:"Muestra genética, reactivo y control.",
+      words:["pcr","adn","genetico","genético","genetica"], parts:["rojo","negro","verde"] },
+    { id:"micro", icon:"🔬", name:"Kit microscopía", desc:"Muestras para observar al microscopio y su reactivo.",
+      words:["microscopio","microscopia","microscopía"], parts:["verde","azul","negro"] },
+  ],
+  colores: [
+    { id:"todas", icon:"🌈", name:"Todas las piezas", desc:"Una pieza de cada color.",
+      words:["todas","todos","completo","cada color"], parts:["azul","rojo","verde","negro"] },
+    { id:"rgb", icon:"🎨", name:"Pack RGB", desc:"Rojo, verde y azul: los colores de una pantalla.",
+      words:["rgb","primarios","pantalla"], parts:["rojo","verde","azul"] },
+    { id:"contraste", icon:"🖤", name:"Pack contraste", desc:"Negro y rojo.",
+      words:["contraste"], parts:["negro","rojo"] },
+  ],
+};
+const kits = () => THEME_KITS[themeKey] || THEME_KITS.almacen;
 let kitRun = null;   // { kit, ids:Set, done:number, total:number }
 
 const $ = id => document.getElementById(id);
@@ -621,7 +655,7 @@ function item(color) {
   return { icon: cfg[color].icon || t[0], name: cfg[color].name || t[1] };
 }
 function log(msg) { const p = $("log"); p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + p.textContent; }
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+function toast(msg) { const t = $("notice"); if (!t) return; t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 4000); }
 
 /* ===== Voz grabada (ElevenLabs · Tornillo) ===== */
 // Cada frase fija tiene un audio en voz/<clave>.mp3 generado con generar_voz.sh
@@ -647,7 +681,7 @@ function allPhrases() {
   COLORS.forEach(c => { const n = item(c.key).name;
     [`Marchando ${n}`, `Pedido enviado: ${n}`, `${n}, en cola`, `${n} todavía no está disponible`, `No queda stock de ${n}`,
      `¡Claro! Te preparo ${n}.`, `Vale, ${n} en camino.`, `Entendido: ${n}.`, `Estoy preparando ${n}.`].forEach(x => P.add(x)); });
-  KITS.forEach(k => {
+  kits().forEach(k => {
     P.add(`Perfecto, preparo el ${k.name}: ${k.parts.map(c => item(c).name).join(", ")}.`);
     P.add(`Preparando ${k.name}: ${k.parts.length} componentes`); P.add(`${k.name} completo`); });
   return [...P].map(cleanSpoken);
@@ -771,11 +805,13 @@ const ready = color => S.sim() || !!cfg[color].model;
 function renderTheme() {
   const t = THEMES[themeKey];
   $("theme").innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}" ${k === themeKey ? "selected" : ""}>🎨 ${v.name}</option>`).join("");
-  $("title").value = store.get("title." + themeKey, t.title);
-  $("subtitle").value = store.get("sub." + themeKey, t.sub);
+  let ti = store.get("title." + themeKey, t.title), su = store.get("sub." + themeKey, t.sub);
+  if (/pickbot/i.test(ti)) ti = t.title;
+  if (/manipulaci[oó]n de muestras/i.test(su)) su = t.sub;
+  $("title").value = ti; $("subtitle").value = su;
   document.title = $("title").value;
 }
-$("theme").onchange = () => { themeKey = $("theme").value; store.set("theme", themeKey); renderTheme(); renderAll(); };
+$("theme").onchange = () => { themeKey = $("theme").value; store.set("theme", themeKey); renderTheme(); renderAll(); if (typeof renderSugg === "function") renderSugg(); };
 $("title").onchange = () => { store.set("title." + themeKey, $("title").value); document.title = $("title").value; };
 $("subtitle").onchange = () => store.set("sub." + themeKey, $("subtitle").value);
 
@@ -799,7 +835,7 @@ function renderQueue() {
   queue.forEach((o, i) => {
     const c = COLORS.find(c => c.key === o.color), it = item(o.color);
     const li = document.createElement("li");
-    li.innerHTML = `<span class="dot" style="background:${c.dot}"></span><span>${i + 1}. ${it.icon} ${it.name}${o.kit ? ` <small style="color:#67e8f9">· ${KITS.find(k => k.id === o.kit).icon} kit</small>` : ""}</span><button class="x" title="Quitar">✕</button>`;
+    li.innerHTML = `<span class="dot" style="background:${c.dot}"></span><span>${i + 1}. ${it.icon} ${it.name}${o.kit ? ` <small style="color:#67e8f9">· ${kits().find(k => k.id === o.kit).icon} kit</small>` : ""}</span><button class="x" title="Quitar">✕</button>`;
     li.querySelector(".x").onclick = () => { queue.splice(i, 1); renderQueue(); };
     q.appendChild(li);
   });
@@ -849,7 +885,7 @@ function renderCfg() {
 }
 function renderKits() {
   const box = $("kits"); if (!box) return; box.innerHTML = "";
-  KITS.forEach(k => {
+  kits().forEach(k => {
     const okAll = k.parts.every(c => ready(c) && cfg[c].stock > 0);
     const b = document.createElement("button");
     b.className = "kit" + (kitRun && kitRun.kit.id === k.id ? " running" : "");
@@ -863,7 +899,7 @@ function renderKits() {
   });
 }
 function requestKit(id) {
-  const k = KITS.find(k => k.id === id); if (!k) return;
+  const k = kits().find(k => k.id === id); if (!k) return;
   const missing = k.parts.filter(c => !ready(c) || cfg[c].stock <= 0);
   if (missing.length) { const n = missing.map(c => item(c).name).join(", "); toast(`No se puede preparar el kit: falta ${n}`); say(`Falta ${n} para el ${k.name}`); return; }
   if (kitRun) { toast("Ya hay un kit en preparación"); return; }
@@ -1093,7 +1129,7 @@ function handleUtterance(raw) {
   const has = (...w) => w.some(x => t.includes(x));
   if (/\b(parar|parale|stop|detente|alto|quieto)\b/.test(t) || /^para\b(?! (medir|mover|que|cargar|programar|ver|detectar|el kit))/.test(t) || /\bpara (el|al) robot\b/.test(t)) { emergencyStop("⏹ Parado por Lagun"); return botMsg("¡Parado! He detenido el robot y vaciado la cola."); }
   if (has("presentate","presentarte","presentacion","presenta el proyecto","explica el proyecto","explicanos el proyecto","que haces aqui")) return presentation();
-  const kit = KITS.find(k => k.words.some(w => t.includes(norm(w))));
+  const kit = kits().find(k => k.words.some(w => t.includes(norm(w))));
   if (kit) { botMsg(`Perfecto, preparo el ${kit.name}: ${kit.parts.map(c => item(c).name).join(", ")}.`); return requestKit(kit.id); }
   const prods = findProducts(t);
   if (prods.length) {
@@ -1115,9 +1151,15 @@ function handleUtterance(raw) {
   botMsg(pick(["Mmm, no te he entendido. Prueba con «necesito un sensor» o «prepárame el kit del brazo».", "No sé qué componente es ese. Tengo sensores, servomotores, baterías y microprocesadores."]));
 }
 $("chatform").onsubmit = e => { e.preventDefault(); const v = $("chatinput").value; $("chatinput").value = ""; handleUtterance(v); };
-["Lagun, preséntate", "Hola Lagun", "Necesito algo para medir distancias", "Prepárame el kit del brazo", "¿Qué puedes hacer?", "¿Cuánto stock queda?"].forEach(q => {
-  const b = document.createElement("button"); b.type = "button"; b.textContent = q; b.onclick = () => handleUtterance(q); $("sugg").appendChild(b);
-});
+function renderSugg() {
+  $("sugg").innerHTML = "";
+  const ex = themeKey === "almacen" ? "Necesito algo para medir distancias" : `Pásame ${item("azul").name}`;
+  const k = kits()[0];
+  ["Lagun, preséntate", "Hola Lagun", ex, `Prepárame el ${k.name}`, "¿Qué puedes hacer?", "¿Cuánto stock queda?"].forEach(q => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = q; b.onclick = () => handleUtterance(q); $("sugg").appendChild(b);
+  });
+}
+renderSugg();
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (!SR) { $("mic").disabled = true; $("mic").textContent = "🎤 Voz no disponible (usa Chrome)"; $("talk").disabled = true; }
