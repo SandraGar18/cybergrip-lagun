@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNTEyIDUxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjN0M1Q0ZGIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMjJEM0VFIi8+PC9saW5lYXJHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9ImIiIGN4PSIuNSIgY3k9Ii41IiByPSIuNSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjRkRFNjhBIi8+PHN0b3Agb2Zmc2V0PSIuNiIgc3RvcC1jb2xvcj0iI0ZBQ0MxNSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0VBQjMwOCIvPjwvcmFkaWFsR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHg9IjI0NiIgeT0iNjIiIHdpZHRoPSIyMCIgaGVpZ2h0PSI2MiIgcng9IjEwIiBmaWxsPSIjQTVCNEZDIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iNTYiIHI9IjIyIiBmaWxsPSIjRjQ3MkI2Ii8+PHJlY3QgeD0iNTYiIHk9IjExOCIgd2lkdGg9IjQwMCIgaGVpZ2h0PSIzMjAiIHJ4PSI5NiIgZmlsbD0idXJsKCNhKSIvPjxyZWN0IHg9IjEwMCIgeT0iMTYyIiB3aWR0aD0iMzEyIiBoZWlnaHQ9IjIzMiIgcng9IjY0IiBmaWxsPSIjMEIxMDIwIi8+PGVsbGlwc2UgY3g9IjE5NiIgY3k9IjI1NiIgcng9IjMyIiByeT0iNDAiIGZpbGw9InVybCgjYikiLz48ZWxsaXBzZSBjeD0iMzE2IiBjeT0iMjU2IiByeD0iMzIiIHJ5PSI0MCIgZmlsbD0idXJsKCNiKSIvPjxjaXJjbGUgY3g9IjE4NiIgY3k9IjI0MiIgcj0iOSIgZmlsbD0iI0ZGRkJFQiIvPjxjaXJjbGUgY3g9IjMwNiIgY3k9IjI0MiIgcj0iOSIgZmlsbD0iI0ZGRkJFQiIvPjxwYXRoIGQ9Ik0yMjIgMzMyaDY4YTYgNiAwIDAgMSA2IDZ2MmEyMiAyMiAwIDAgMS0yMiAyMmgtMzZhMjIgMjIgMCAwIDEtMjItMjJ2LTJhNiA2IDAgMCAxIDYtNnoiIGZpbGw9IiM2N0U4RjkiLz48L3N2Zz4=">
 <title>Lagun · Asistente de pedidos SO-101</title>
 <style>
   :root {
@@ -459,13 +460,15 @@
   .notice.show { opacity:1; color:var(--text); }
   .toast { display:none !important; }
   .kit.running[disabled] { opacity:1; }
+  .logo.lagunlogo { background:none !important; box-shadow:none !important; border:none !important; padding:0; width:66px; height:66px; margin:-6px 0; }
+  .logo.lagunlogo svg { width:100%; height:100%; filter:drop-shadow(0 6px 14px rgba(124,92,255,.35)); }
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">🤖</div>
+      <div class="logo lagunlogo"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="lgF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C5CFF"/><stop offset="1" stop-color="#22D3EE"/></linearGradient><radialGradient id="lgE" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FDE68A"/><stop offset=".6" stop-color="#FACC15"/><stop offset="1" stop-color="#EAB308"/></radialGradient></defs><rect x="246" y="62" width="20" height="62" rx="10" fill="#A5B4FC"/><circle cx="256" cy="56" r="22" fill="#F472B6"/><rect x="56" y="118" width="400" height="320" rx="96" fill="url(#lgF)"/><rect x="100" y="162" width="312" height="232" rx="64" fill="#0B1020"/><ellipse cx="196" cy="256" rx="32" ry="40" fill="url(#lgE)"/><ellipse cx="316" cy="256" rx="32" ry="40" fill="url(#lgE)"/><circle cx="186" cy="242" r="9" fill="#FFFBEB"/><circle cx="306" cy="242" r="9" fill="#FFFBEB"/><path d="M222 332h68a6 6 0 0 1 6 6v2a22 22 0 0 1-22 22h-36a22 22 0 0 1-22-22v-2a6 6 0 0 1 6-6z" fill="#67E8F9"/></svg></div>
       <div class="titles">
         <input id="title" aria-label="Nombre del proyecto">
         <input id="subtitle" class="sub" aria-label="Lema">
