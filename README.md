@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.png" alt="Lagun · Equipo CyberGrip" width="100%"></p>
+
 # 🤖 Lagun · Almacén de componentes con un brazo SO-101
 
 **Equipo CyberGrip** · Hackathon LeRobot Bilbao 2026
