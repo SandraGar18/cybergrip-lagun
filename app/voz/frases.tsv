@@ -1,0 +1,66 @@
+8e0af8d0	¡Hola a todos! Soy Lagun, que en euskera significa compañero. Soy el asistente de este almacén de componentes de robótica.
+58f36893	Controlo un brazo robótico SO-101. Nadie me ha programado los movimientos: aprendí por imitación. Mis creadoras movieron el brazo a mano unas cuarenta veces por cada pieza, y yo aprendí a hacerlo solo.
+f8da4fae	En el almacén tengo cuatro tipos de componentes: sensores, servomotores, baterías y microprocesadores. Cada uno tiene su propio modelo de inteligencia artificial.
+a65f2b3c	Podéis pedirme una pieza con un botón, con el teclado, o simplemente hablándome. Y si necesitáis montar algo, os preparo un kit completo, pieza a pieza.
+386aa80e	¿Queréis probarlo? Decidme qué componente necesitáis.
+65753486	¡Hola! Soy Lagun, el asistente del almacén. ¿Qué componente necesitas?
+c51a2614	¡Buenas! ¿Qué te preparo hoy?
+495b82d7	Soy Lagun («compañero» en euskera), el asistente de este almacén de robótica. Controlo un brazo SO-101 que aprendió a coger piezas viendo cómo lo hacían mis creadoras.
+24d7b98a	Puedo prepararte sensores, servomotores, baterías y microprocesadores, o kits completos. Dímelo con tus palabras, por ejemplo: «necesito algo para medir distancias» o «prepárame el kit del brazo».
+da7ad0e3	Aprendí por imitación: me enseñaron moviendo un brazo guía muchas veces mientras grababa con mis cámaras. Después una red neuronal llamada ACT aprendió a repetir esos movimientos.
+c75d8d8	Ahora mismo estoy libre. ¿Te preparo algo?
+76fe5b11	¡De nada! Para eso estoy.
+e4ae227	¡A ti! ¿Algo más?
+54b0652d	Un placer.
+8a038735	¿Por qué el robot cruzó la calle? Porque estaba programado para ello.
+a3a06a8b	Mi comida favorita son los microchips… con salsa de bytes.
+52a4d16d	¡Hasta luego! Aquí estaré cuando me necesites.
+194d6fab	Mmm, no te he entendido. Prueba con «necesito un sensor» o «prepárame el kit del brazo».
+6b4484c1	No sé qué componente es ese. Tengo sensores, servomotores, baterías y microprocesadores.
+8803bc98	¡Parado! He detenido el robot y vaciado la cola.
+8c524d57	Robot detenido
+1636ad24	Marchando Sensores
+e0862f0c	Pedido enviado: Sensores
+9af10275	Sensores, en cola
+e5afc96	Sensores todavía no está disponible
+9e620511	No queda stock de Sensores
+104f4a4a	¡Claro! Te preparo Sensores.
+a0ee1ea3	Vale, Sensores en camino.
+f9e583b9	Entendido: Sensores.
+67e38985	Estoy preparando Sensores.
+82b1862a	Marchando Servomotores
+b3fbc12	Pedido enviado: Servomotores
+ebbab3bb	Servomotores, en cola
+3cee35c	Servomotores todavía no está disponible
+5f710c97	No queda stock de Servomotores
+6d5cc010	¡Claro! Te preparo Servomotores.
+ab077369	Vale, Servomotores en camino.
+414018ff	Entendido: Servomotores.
+e72424cb	Estoy preparando Servomotores.
+3ef3e3c1	Marchando Baterías
+94365a9	Pedido enviado: Baterías
+9d65f9b2	Baterías, en cola
+c2821113	Baterías todavía no está disponible
+c71f3bae	No queda stock de Baterías
+50b35487	¡Claro! Te preparo Baterías.
+147dd920	Vale, Baterías en camino.
+3a498df6	Entendido: Baterías.
+a84793c2	Estoy preparando Baterías.
+bca807f6	Marchando Microprocesadores
+8c8c2ede	Pedido enviado: Microprocesadores
+954ee7	Microprocesadores, en cola
+cc9bd188	Microprocesadores todavía no está disponible
+fa4d9a83	No queda stock de Microprocesadores
+70b7065c	¡Claro! Te preparo Microprocesadores.
+192c9a15	Vale, Microprocesadores en camino.
+9df24cab	Entendido: Microprocesadores.
+16f197f7	Estoy preparando Microprocesadores.
+c7b2a702	Perfecto, preparo el Kit robot seguidor de línea: Sensores, Servomotores, Baterías, Microprocesadores.
+4c528570	Preparando Kit robot seguidor de línea: 4 componentes
+90dcd30e	Kit robot seguidor de línea completo
+9a0010e9	Perfecto, preparo el Kit brazo robótico: Servomotores, Microprocesadores, Baterías.
+51791674	Preparando Kit brazo robótico: 3 componentes
+f2f86b53	Kit brazo robótico completo
+42ee8d68	Perfecto, preparo el Kit estación meteorológica: Sensores, Microprocesadores, Baterías.
+ea66fd9	Preparando Kit estación meteorológica: 3 componentes
+5ccf10f8	Kit estación meteorológica completo

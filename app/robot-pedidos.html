@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PickBot · Asistente de pedidos SO-101</title>
+<style>
+  :root {
+    --bg:#0b1020; --panel:#141b2e; --panel2:#1b2440; --line:#2a3557; --text:#e8edf7; --muted:#93a0bd;
+    --accent:#7c5cff; --ok:#22c55e; --err:#ef4444; --warn:#f59e0b;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; }
+  body { font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif; background:radial-gradient(1200px 600px at 10% -10%, #1d1846 0%, transparent 60%), var(--bg); color:var(--text); }
+  button { font-family:inherit; }
+  .app { max-width:1280px; margin:auto; padding:18px 22px 28px; display:grid; gap:16px; }
+  header { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .logo { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; font-size:26px; background:linear-gradient(135deg,#7c5cff,#22d3ee); }
+  .titles { flex:1; min-width:260px; }
+  .titles input { font-family:inherit; font-weight:800; font-size:28px; line-height:1.15; color:var(--text); background:transparent; border:none; width:100%; padding:0; }
+  .titles input.sub { font-weight:400; font-size:15px; color:var(--muted); margin-top:2px; }
+  .pill { padding:7px 12px; border-radius:999px; font-size:13px; background:var(--panel2); border:1px solid var(--line); white-space:nowrap; }
+  .pill.ok { background:#0f3a24; border-color:#166534; color:#bbf7d0; }
+  .pill.err { background:#3f1414; border-color:#7f1d1d; color:#fecaca; }
+  .pill.sim { background:#3d2a07; border-color:#78350f; color:#fde68a; }
+  select.theme { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; }
+  .kits { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:900px){ .kits{ grid-template-columns:1fr;} }
+  .kit { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:14px 16px; color:var(--text); text-align:left; cursor:pointer; transition:transform .12s, border-color .2s; }
+  .kit:hover { transform:translateY(-2px); border-color:var(--accent); }
+  .kit[disabled] { opacity:.4; cursor:not-allowed; transform:none; }
+  .kit .kt { font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px; }
+  .kit .kd { color:var(--muted); font-size:13px; margin:4px 0 10px; }
+  .kit .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .kit .chip { font-size:12px; padding:3px 8px; border-radius:999px; background:var(--panel2); border:1px solid var(--line); }
+  .kit.running { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.25); }
+  .kit .prog { font-size:12px; color:#67e8f9; margin-top:8px; min-height:16px; }
+  .assistant { display:grid; grid-template-columns:220px 1fr; gap:18px; align-items:stretch; }
+  @media (max-width:900px){ .assistant{ grid-template-columns:1fr; } }
+  .face { background:linear-gradient(160deg,#1e1b4b,#0f172a); border:1px solid var(--line); border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:16px; }
+  .head { width:150px; height:120px; border-radius:34px; background:linear-gradient(160deg,#7c5cff,#22d3ee); position:relative; box-shadow:0 10px 30px rgba(124,92,255,.35); }
+  .head::before { content:""; position:absolute; top:-18px; left:50%; width:6px; height:18px; background:#a5b4fc; transform:translateX(-50%); border-radius:3px; }
+  .head::after { content:""; position:absolute; top:-26px; left:50%; width:14px; height:14px; background:#f472b6; border-radius:50%; transform:translateX(-50%); box-shadow:0 0 12px #f472b6; }
+  .screen { position:absolute; inset:16px 14px; background:#0b1020; border-radius:20px; }
+  .eye { position:absolute; top:22px; width:22px; height:26px; background:#67e8f9; border-radius:50%; box-shadow:0 0 12px #67e8f9; animation:blink 4s infinite; }
+  .eye.l { left:26px; } .eye.r { right:26px; }
+  @keyframes blink { 0%,92%,100% { transform:scaleY(1);} 95% { transform:scaleY(.1);} }
+  .mouth { position:absolute; bottom:14px; left:50%; width:36px; height:8px; background:#67e8f9; border-radius:0 0 18px 18px; transform:translateX(-50%); transition:height .1s; }
+  .head.talking .mouth { animation:talk .25s infinite alternate; }
+  @keyframes talk { from { height:4px; } to { height:16px; } }
+  .head.listening { box-shadow:0 0 0 6px rgba(244,114,182,.35), 0 10px 30px rgba(124,92,255,.35); }
+  .head.working .eye { background:#fde68a; box-shadow:0 0 12px #fde68a; }
+  .botname { font-weight:800; font-size:18px; }
+  .botstate { color:var(--muted); font-size:13px; text-align:center; min-height:18px; }
+  .chat { display:flex; flex-direction:column; gap:10px; min-height:260px; }
+  .msgs { flex:1; overflow:auto; max-height:260px; display:flex; flex-direction:column; gap:8px; padding-right:4px; }
+  .msg { max-width:80%; padding:9px 13px; border-radius:16px; font-size:15px; line-height:1.35; }
+  .msg.bot { background:var(--panel2); border:1px solid var(--line); align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.user { background:var(--accent); align-self:flex-end; border-bottom-right-radius:4px; }
+  .chatin { display:flex; gap:8px; }
+  .chatin input { flex:1; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:15px; }
+  .sugg { display:flex; flex-wrap:wrap; gap:6px; }
+  .sugg button { background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:5px 11px; font-size:13px; cursor:pointer; }
+  .sectitle { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:2px 2px -6px; }
+  .products { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:900px){ .products{ grid-template-columns:repeat(2,1fr);} }
+  .product { position:relative; border:none; border-radius:22px; padding:18px 16px 16px; color:white; text-align:left; cursor:pointer;
+             min-height:170px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 30px rgba(0,0,0,.35);
+             transition:transform .12s, box-shadow .2s, opacity .2s; overflow:hidden; }
+  .product::after { content:""; position:absolute; inset:auto -30% -60% auto; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.08); }
+  .product:hover { transform:translateY(-2px); }
+  .product:active { transform:scale(.98); }
+  .product[disabled] { opacity:.38; cursor:not-allowed; transform:none; }
+  .product .icon { font-size:40px; line-height:1; }
+  .product .name { font-size:22px; font-weight:800; margin-top:8px; }
+  .product .meta { display:flex; justify-content:space-between; align-items:end; gap:8px; font-size:13px; opacity:.9; margin-top:8px; }
+  .product .key { background:rgba(0,0,0,.25); border-radius:8px; padding:2px 8px; font-weight:700; }
+  .product.busy { outline:4px solid #fff; animation:glow 1.2s infinite; }
+  @keyframes glow { 50% { box-shadow:0 0 0 8px rgba(255,255,255,.15), 0 10px 30px rgba(0,0,0,.35);} }
+  .c-azul{background:linear-gradient(145deg,#2563eb,#1e3a8a)} .c-rojo{background:linear-gradient(145deg,#ef4444,#991b1b)}
+  .c-verde{background:linear-gradient(145deg,#22c55e,#166534)} .c-negro{background:linear-gradient(145deg,#334155,#0f172a); border:1px solid #475569}
+  .main { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+  @media (max-width:900px){ .main{ grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px 18px; }
+  .card h2 { margin:0 0 10px; font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .status { display:flex; gap:16px; align-items:center; }
+  .robot { width:74px; height:74px; border-radius:20px; display:grid; place-items:center; font-size:40px; background:var(--panel2); flex:none; }
+  .robot.working { animation:bob 1s ease-in-out infinite; background:#2a2160; }
+  @keyframes bob { 50% { transform:translateY(-4px) rotate(-3deg); } }
+  .status .big { font-size:22px; font-weight:700; }
+  .status .small { color:var(--muted); font-size:14px; margin-top:4px; }
+  .bar { height:10px; background:var(--panel2); border-radius:999px; overflow:hidden; margin-top:12px; }
+  .bar > div { height:100%; width:0; background:linear-gradient(90deg,#7c5cff,#22d3ee); transition:width .3s linear; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .btn { border:none; border-radius:14px; padding:13px 18px; font-size:16px; font-weight:700; cursor:pointer; color:white; }
+  .btn.mic { background:var(--accent); } .btn.mic.on { background:#a78bfa; animation:pulse 1s infinite; }
+  .btn.stop { background:var(--err); flex:1; min-width:180px; font-size:18px; }
+  .btn.ghost { background:var(--panel2); border:1px solid var(--line); color:var(--text); font-weight:600; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  @keyframes pulse { 50% { opacity:.6 } }
+  .heard { margin-top:10px; font-size:14px; color:var(--muted); min-height:20px; }
+  .queue { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  .queue li { display:flex; align-items:center; gap:10px; background:var(--panel2); border-radius:12px; padding:10px 12px; font-size:15px; }
+  .queue li .dot { width:12px; height:12px; border-radius:50%; flex:none; }
+  .queue li .x { margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; }
+  .empty { color:var(--muted); font-size:14px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat { background:var(--panel2); border-radius:14px; padding:12px; }
+  .stat b { display:block; font-size:26px; }
+  .stat span { color:var(--muted); font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th,td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  td .mark { border:1px solid var(--line); background:var(--panel2); color:var(--text); border-radius:8px; padding:2px 8px; cursor:pointer; margin-right:4px; }
+  td .mark.sel-ok { background:#14532d; border-color:#22c55e; } td .mark.sel-ko { background:#7f1d1d; border-color:#ef4444; }
+  details summary { cursor:pointer; font-weight:600; color:var(--muted); }
+  .cfg { display:grid; grid-template-columns:90px 60px 1fr 1fr 80px; gap:8px 10px; align-items:center; margin-top:12px; font-size:14px; }
+  .cfg input, .cfg select, .row input, .row select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; font-size:14px; color:var(--muted); }
+  pre { white-space:pre-wrap; font-size:12px; color:var(--muted); max-height:160px; overflow:auto; background:var(--bg); padding:8px; border-radius:8px; }
+  a { color:#93c5fd; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#111827; border:1px solid var(--line); padding:12px 18px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.4); opacity:0; transition:opacity .3s; pointer-events:none; font-size:15px; }
+  .toast.show { opacity:1; }
+
+  /* ===== Rediseño ===== */
+  body { background:
+      radial-gradient(900px 500px at 0% -10%, rgba(124,92,255,.25), transparent 60%),
+      radial-gradient(800px 500px at 110% 10%, rgba(34,211,238,.14), transparent 60%),
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0/32px 32px,
+      #070b18; min-height:100vh; }
+  .app { max-width:1440px; padding:20px 26px 40px; gap:18px; }
+  .hidden { display:none !important; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:6px 2px; }
+  .brand { display:flex; align-items:center; gap:14px; flex:1; min-width:300px; }
+  .logo { width:52px; height:52px; border-radius:16px; font-size:28px; box-shadow:0 8px 24px rgba(124,92,255,.45); }
+  .titles input { background:linear-gradient(90deg,#fff,#c4b5fd 60%,#67e8f9); -webkit-background-clip:text; background-clip:text; color:transparent; font-size:30px; }
+  .titles input.sub { -webkit-text-fill-color:var(--muted); color:var(--muted); background:none; }
+  .topright { display:flex; gap:10px; align-items:center; }
+  .pill { display:inline-flex; align-items:center; gap:8px; }
+  .pill::before { content:""; width:8px; height:8px; border-radius:50%; background:#94a3b8; }
+  .pill.ok::before { background:#22c55e; box-shadow:0 0 10px #22c55e; }
+  .pill.err::before { background:#ef4444; box-shadow:0 0 10px #ef4444; }
+  .pill.sim::before { background:#f59e0b; box-shadow:0 0 10px #f59e0b; }
+
+  .card { background:rgba(20,27,46,.72); backdrop-filter:blur(10px); border:1px solid rgba(148,163,184,.14); border-radius:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+  .card h2 { font-size:13px; margin:0; }
+  .cardhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .link { background:none; border:none; color:#a5b4fc; cursor:pointer; font-size:13px; font-weight:600; padding:4px 6px; }
+  .link:hover { color:#fff; }
+
+  .dash { display:grid; grid-template-columns:400px 1fr; gap:18px; align-items:start; }
+  @media (max-width:1100px){ .dash{ grid-template-columns:1fr; } }
+  .col-left, .col-right { display:grid; gap:16px; }
+
+  /* Lagun */
+  .assistant { display:flex; flex-direction:column; gap:12px; padding:16px; }
+  .face { flex-direction:row; justify-content:flex-start; gap:14px; padding:12px; border-radius:18px; background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(34,211,238,.10)); }
+  .face .facetext { flex:1; }
+  .head { width:92px; height:74px; border-radius:22px; flex:none; margin-top:10px; }
+  .head::before { top:-12px; height:12px; width:4px; } .head::after { top-:0; top:-20px; width:10px; height:10px; }
+  .screen { inset:10px 9px; border-radius:14px; }
+  .eye { top:13px; width:14px; height:17px; } .eye.l { left:15px; } .eye.r { right:15px; }
+  .mouth { bottom:8px; width:22px; height:5px; }
+  .botname { font-size:20px; } .botstate { text-align:left; }
+  .btn.mic { padding:11px 14px; font-size:15px; }
+  .msgs { max-height:240px; min-height:150px; }
+  .msg { font-size:14px; }
+  .sugg button { font-size:12px; }
+  .sugg button:hover { border-color:var(--accent); }
+  .chatin input { border-radius:14px; }
+  .btn.send { background:var(--accent); padding:0 16px; font-size:18px; }
+
+  /* Robot */
+  .robotcard { padding:16px; display:grid; gap:12px; }
+  .robot { width:58px; height:58px; font-size:30px; border-radius:16px; }
+  .status .big { font-size:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status .small { font-size:13px; }
+  .bar { margin:0; height:8px; }
+  .btn.stop { width:100%; font-size:17px; padding:14px; background:linear-gradient(135deg,#ef4444,#b91c1c); box-shadow:0 8px 20px rgba(239,68,68,.35); }
+  .kbd { font-size:11px; background:rgba(0,0,0,.25); padding:2px 6px; border-radius:6px; margin-left:6px; vertical-align:middle; }
+  .heard { margin:0; min-height:0; font-size:13px; }
+  .queue li { font-size:14px; padding:9px 12px; }
+
+  /* Componentes */
+  .sectitle { display:flex; align-items:baseline; gap:10px; font-weight:700; margin:4px 2px -4px; }
+  .sectitle span { text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; opacity:.7; }
+  .products { grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1300px){ .products{ grid-template-columns:repeat(2,1fr);} }
+  .product { min-height:190px; border-radius:24px; padding:18px; }
+  .product .icon { width:62px; height:62px; display:grid; place-items:center; font-size:34px; border-radius:18px; background:rgba(255,255,255,.16); box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
+  .product .name { font-size:21px; margin-top:12px; letter-spacing:-.01em; }
+  .product .meta { font-size:12px; }
+  .product .key { background:rgba(255,255,255,.2); }
+
+  /* Kits */
+  .kits { gap:14px; }
+  .kit { border-radius:20px; padding:16px; background:linear-gradient(160deg,rgba(124,92,255,.14),rgba(20,27,46,.8)); display:flex; flex-direction:column; }
+  .kit .kt { font-size:17px; }
+  .kit .chips { margin-top:auto; }
+
+  /* Stats */
+  .stats { grid-template-columns:repeat(4,1fr); gap:14px; }
+  .stat { border-radius:18px; padding:16px; background:rgba(20,27,46,.72); border:1px solid rgba(148,163,184,.14); position:relative; overflow:hidden; }
+  .stat::after { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .stat.s1::after{background:#7c5cff} .stat.s2::after{background:#22c55e} .stat.s3::after{background:#22d3ee} .stat.s4::after{background:#f59e0b}
+  .stat b { font-size:30px; }
+  table td, table th { padding:9px 6px; }
+
+  /* ===== Diseños (skins) ===== */
+  .modebtn { cursor:pointer; font-weight:600; }
+  select.skin, .modebtn { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; }
+
+  /* 1 · Laboratorio claro */
+  body[data-skin="claro"] { --bg:#F5F7FB; --panel:#FFFFFF; --panel2:#F1F4F9; --line:#E3E8F0; --text:#0F172A; --muted:#64748B; --accent:#4F46E5;
+    background:#F5F7FB; color:var(--text); }
+  body[data-skin="claro"] .card, body[data-skin="claro"] .stat { background:#fff; border:1px solid var(--line); box-shadow:0 1px 3px rgba(15,23,42,.06); backdrop-filter:none; }
+  body[data-skin="claro"] .titles input { background:none; -webkit-text-fill-color:#0F172A; color:#0F172A; }
+  body[data-skin="claro"] .logo { background:#4F46E5; box-shadow:none; }
+  body[data-skin="claro"] .product { color:#0F172A; background:#fff; border:1px solid var(--line); box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  body[data-skin="claro"] .product::after { display:none; }
+  body[data-skin="claro"] .product .icon { background:var(--panel2); box-shadow:none; }
+  body[data-skin="claro"] .c-azul { border-top:6px solid #2563EB; } body[data-skin="claro"] .c-rojo { border-top:6px solid #DC2626; }
+  body[data-skin="claro"] .c-verde { border-top:6px solid #16A34A; } body[data-skin="claro"] .c-negro { border-top:6px solid #0F172A; }
+  body[data-skin="claro"] .product .key { background:var(--panel2); color:var(--muted); }
+  body[data-skin="claro"] .product.busy { outline:3px solid #4F46E5; }
+  body[data-skin="claro"] .kit { background:#fff; }
+  body[data-skin="claro"] .face { background:#EEF2FF; }
+  body[data-skin="claro"] .head { background:#4F46E5; box-shadow:none; }
+  body[data-skin="claro"] .msg.user { color:#fff; }
+  body[data-skin="claro"] .btn.stop { background:#DC2626; box-shadow:none; }
+  body[data-skin="claro"] .pill { color:#334155; }
+  body[data-skin="claro"] .link { color:#4F46E5; }
+
+  /* 2 · Almacén industrial */
+  body[data-skin="industrial"] { --bg:#141414; --panel:#1E1E1E; --panel2:#2A2A2A; --line:#333; --text:#EDEDED; --muted:#A3A3A3; --accent:#FACC15;
+    background:#141414; font-family:"Bahnschrift","Segoe UI",system-ui,sans-serif; }
+  body[data-skin="industrial"] .card, body[data-skin="industrial"] .stat { background:#1E1E1E; border:1px solid #333; border-radius:6px; box-shadow:none; backdrop-filter:none; }
+  body[data-skin="industrial"] .titles input { background:none; -webkit-text-fill-color:#FACC15; color:#FACC15; text-transform:uppercase; letter-spacing:.04em; }
+  body[data-skin="industrial"] .logo { background:#FACC15; border-radius:6px; box-shadow:none; }
+  body[data-skin="industrial"] .product { background:#232323; border-radius:6px; border:1px solid #333; box-shadow:none; color:#EDEDED; }
+  body[data-skin="industrial"] .product::after { display:none; }
+  body[data-skin="industrial"] .c-azul { border-left:8px solid #3B82F6; } body[data-skin="industrial"] .c-rojo { border-left:8px solid #EF4444; }
+  body[data-skin="industrial"] .c-verde { border-left:8px solid #22C55E; } body[data-skin="industrial"] .c-negro { border-left:8px solid #A3A3A3; }
+  body[data-skin="industrial"] .product .icon { background:#2E2E2E; border-radius:6px; box-shadow:none; }
+  body[data-skin="industrial"] .product .name { text-transform:uppercase; letter-spacing:.03em; }
+  body[data-skin="industrial"] .product .key { background:#FACC15; color:#141414; border-radius:3px; }
+  body[data-skin="industrial"] .product.busy { outline:3px solid #FACC15; }
+  body[data-skin="industrial"] .kit { background:#1E1E1E; border-radius:6px; }
+  body[data-skin="industrial"] .kit.running { border-color:#FACC15; box-shadow:0 0 0 3px rgba(250,204,21,.25); }
+  body[data-skin="industrial"] .face { background:#262626; border-radius:6px; }
+  body[data-skin="industrial"] .head { background:#FACC15; box-shadow:none; border-radius:10px; }
+  body[data-skin="industrial"] .msg { border-radius:6px; } body[data-skin="industrial"] .msg.user { color:#141414; }
+  body[data-skin="industrial"] .btn { border-radius:4px; }
+  body[data-skin="industrial"] .btn.mic, body[data-skin="industrial"] .btn.send { background:#FACC15; color:#141414; }
+  body[data-skin="industrial"] .btn.stop { background:repeating-linear-gradient(45deg,#FACC15 0 14px,#141414 14px 28px); color:#fff; text-shadow:0 0 4px #000,0 0 4px #000; box-shadow:none; }
+  body[data-skin="industrial"] .bar > div { background:#FACC15; }
+  body[data-skin="industrial"] .sectitle { color:#FACC15; }
+  body[data-skin="industrial"] .link { color:#FACC15; }
+  body[data-skin="industrial"] .stat::after { background:#FACC15 !important; }
+
+  /* 3 · Robótica amigable */
+  body[data-skin="amigable"] { --bg:#FFF7ED; --panel:#FFFFFF; --panel2:#FFF1E2; --line:#FED7AA; --text:#431407; --muted:#9A3412; --accent:#F97316;
+    background:#FFF7ED; color:var(--text); font-family:"Nunito","Segoe UI Rounded","Segoe UI",system-ui,sans-serif; }
+  body[data-skin="amigable"] .card, body[data-skin="amigable"] .stat { background:#fff; border:2px solid #FED7AA; border-radius:28px; box-shadow:0 6px 0 #FED7AA; backdrop-filter:none; }
+  body[data-skin="amigable"] .titles input { background:none; -webkit-text-fill-color:#C2410C; color:#C2410C; }
+  body[data-skin="amigable"] .logo { background:#F97316; border-radius:50%; box-shadow:0 4px 0 #C2410C; }
+  body[data-skin="amigable"] .product { border-radius:28px; box-shadow:0 6px 0 rgba(0,0,0,.15); }
+  body[data-skin="amigable"] .c-azul{background:#3B82F6} body[data-skin="amigable"] .c-rojo{background:#EF4444}
+  body[data-skin="amigable"] .c-verde{background:#22C55E} body[data-skin="amigable"] .c-negro{background:#334155; border:none}
+  body[data-skin="amigable"] .product .icon { border-radius:50%; }
+  body[data-skin="amigable"] .kit { background:#fff; border:2px solid #FED7AA; border-radius:24px; }
+  body[data-skin="amigable"] .kit .chip { background:#FFF1E2; border-color:#FED7AA; }
+  body[data-skin="amigable"] .face { background:#FFEDD5; border-radius:24px; }
+  body[data-skin="amigable"] .head { background:#F97316; box-shadow:0 5px 0 #C2410C; }
+  body[data-skin="amigable"] .msg { border-radius:20px; } body[data-skin="amigable"] .msg.user { color:#fff; }
+  body[data-skin="amigable"] .btn { border-radius:999px; }
+  body[data-skin="amigable"] .btn.mic, body[data-skin="amigable"] .btn.send { background:#F97316; box-shadow:0 4px 0 #C2410C; }
+  body[data-skin="amigable"] .btn.stop { background:#EF4444; box-shadow:0 5px 0 #991B1B; }
+  body[data-skin="amigable"] .bar > div { background:#F97316; }
+  body[data-skin="amigable"] .pill { color:#7C2D12; }
+  body[data-skin="amigable"] .link { color:#C2410C; }
+  body[data-skin="amigable"] .stat::after { display:none; }
+  body[data-skin="amigable"] .stat b { color:#EA580C; }
+
+  /* 4 · Minimal oscuro */
+  body[data-skin="minimal"] { --bg:#0A0A0A; --panel:#0A0A0A; --panel2:#171717; --line:#262626; --text:#FAFAFA; --muted:#A3A3A3; --accent:#FAFAFA;
+    background:#0A0A0A; }
+  body[data-skin="minimal"] .card, body[data-skin="minimal"] .stat { background:#0A0A0A; border:1px solid #262626; border-radius:12px; box-shadow:none; backdrop-filter:none; }
+  body[data-skin="minimal"] .titles input { background:none; -webkit-text-fill-color:#FAFAFA; color:#FAFAFA; font-weight:600; }
+  body[data-skin="minimal"] .logo { background:#0A0A0A; border:1px solid #FAFAFA; box-shadow:none; }
+  body[data-skin="minimal"] .product { background:#0A0A0A; border:1px solid #262626; border-radius:12px; box-shadow:none; color:#FAFAFA; }
+  body[data-skin="minimal"] .product:hover { border-color:#525252; }
+  body[data-skin="minimal"] .product::after { display:none; }
+  body[data-skin="minimal"] .product .icon { background:#171717; box-shadow:none; border-radius:10px; }
+  body[data-skin="minimal"] .product .name::before { content:"●"; margin-right:8px; font-size:14px; vertical-align:middle; }
+  body[data-skin="minimal"] .c-azul .name::before{color:#3B82F6} body[data-skin="minimal"] .c-rojo .name::before{color:#EF4444}
+  body[data-skin="minimal"] .c-verde .name::before{color:#22C55E} body[data-skin="minimal"] .c-negro .name::before{color:#737373}
+  body[data-skin="minimal"] .product .key { background:#171717; color:#A3A3A3; }
+  body[data-skin="minimal"] .product.busy { outline:1px solid #FAFAFA; animation:none; }
+  body[data-skin="minimal"] .kit { background:#0A0A0A; border-radius:12px; }
+  body[data-skin="minimal"] .kit.running { border-color:#FAFAFA; box-shadow:none; }
+  body[data-skin="minimal"] .face { background:#111; border:1px solid #262626; border-radius:12px; }
+  body[data-skin="minimal"] .head { background:#FAFAFA; box-shadow:none; }
+  body[data-skin="minimal"] .head::after { background:#FAFAFA; box-shadow:none; }
+  body[data-skin="minimal"] .eye, body[data-skin="minimal"] .mouth { background:#FAFAFA; box-shadow:none; }
+  body[data-skin="minimal"] .msg.user { background:#FAFAFA; color:#0A0A0A; }
+  body[data-skin="minimal"] .btn.mic, body[data-skin="minimal"] .btn.send { background:#FAFAFA; color:#0A0A0A; }
+  body[data-skin="minimal"] .btn.stop { background:transparent; border:1px solid #EF4444; color:#EF4444; box-shadow:none; }
+  body[data-skin="minimal"] .bar > div { background:#FAFAFA; }
+  body[data-skin="minimal"] .stat::after { display:none; }
+  body[data-skin="minimal"] .link { color:#A3A3A3; }
+
+  body[data-skin="claro"] .pill.sim, body[data-skin="amigable"] .pill.sim { background:#FEF3C7; border-color:#FCD34D; color:#92400E; }
+  body[data-skin="claro"] .pill.ok, body[data-skin="amigable"] .pill.ok { background:#DCFCE7; border-color:#86EFAC; color:#166534; }
+  body[data-skin="claro"] .pill.err, body[data-skin="amigable"] .pill.err { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+  body[data-skin="industrial"] .product .name, body[data-skin="minimal"] .product .name { font-size:clamp(13px,1.15vw,18px) !important; letter-spacing:0 !important; }
+
+  /* 5 · Fábrica clara (industrial en claro) */
+  body[data-skin="fabrica"] { --bg:#F2F1EC; --panel:#FFFFFF; --panel2:#ECEAE3; --line:#D6D3CA; --text:#1C1C1C; --muted:#5C5A55; --accent:#EAB308;
+    background:#F2F1EC; color:var(--text); font-family:"Bahnschrift","Segoe UI",system-ui,sans-serif; }
+  body[data-skin="fabrica"] .card, body[data-skin="fabrica"] .stat { background:#fff; border:1px solid #D6D3CA; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,.06); backdrop-filter:none; }
+  body[data-skin="fabrica"] .titles input { background:none; -webkit-text-fill-color:#1C1C1C; color:#1C1C1C; text-transform:uppercase; letter-spacing:.04em; }
+  body[data-skin="fabrica"] .logo { background:#FACC15; border-radius:6px; box-shadow:none; border:2px solid #1C1C1C; }
+  body[data-skin="fabrica"] .topbar { border-bottom:6px solid transparent; border-image:repeating-linear-gradient(45deg,#FACC15 0 14px,#1C1C1C 14px 28px) 6; padding-bottom:14px; }
+  body[data-skin="fabrica"] .product { background:#fff; border-radius:6px; border:1px solid #D6D3CA; box-shadow:0 1px 2px rgba(0,0,0,.06); color:#1C1C1C; }
+  body[data-skin="fabrica"] .product::after { display:none; }
+  body[data-skin="fabrica"] .c-azul { border-left:8px solid #2563EB; } body[data-skin="fabrica"] .c-rojo { border-left:8px solid #DC2626; }
+  body[data-skin="fabrica"] .c-verde { border-left:8px solid #16A34A; } body[data-skin="fabrica"] .c-negro { border-left:8px solid #1C1C1C; }
+  body[data-skin="fabrica"] .product .icon { background:#ECEAE3; border-radius:6px; box-shadow:none; }
+  body[data-skin="fabrica"] .product .name { text-transform:uppercase; font-size:clamp(13px,1.1vw,18px) !important; letter-spacing:0 !important; }
+  body[data-skin="fabrica"] .product .key { background:#1C1C1C; color:#FACC15; border-radius:3px; }
+  body[data-skin="fabrica"] .product.busy { outline:3px solid #EAB308; }
+  body[data-skin="fabrica"] .kit { background:#fff; border-radius:6px; }
+  body[data-skin="fabrica"] .kit.running { border-color:#EAB308; box-shadow:0 0 0 3px rgba(234,179,8,.3); }
+  body[data-skin="fabrica"] .face { background:#FEF9C3; border-radius:6px; }
+  body[data-skin="fabrica"] .head { background:#FACC15; box-shadow:none; border-radius:10px; border:2px solid #1C1C1C; }
+  body[data-skin="fabrica"] .msg { border-radius:6px; } body[data-skin="fabrica"] .msg.user { background:#1C1C1C; color:#FACC15; }
+  body[data-skin="fabrica"] .btn { border-radius:4px; }
+  body[data-skin="fabrica"] .btn.mic, body[data-skin="fabrica"] .btn.send { background:#FACC15; color:#1C1C1C; border:2px solid #1C1C1C; }
+  body[data-skin="fabrica"] .btn.stop { background:repeating-linear-gradient(45deg,#FACC15 0 14px,#1C1C1C 14px 28px); color:#fff; text-shadow:0 0 4px #000,0 0 4px #000,0 0 2px #000; box-shadow:none; }
+  body[data-skin="fabrica"] .bar > div { background:#EAB308; }
+  body[data-skin="fabrica"] .sectitle { color:#1C1C1C; }
+  body[data-skin="fabrica"] .link { color:#A16207; }
+  body[data-skin="fabrica"] .stat::after { background:#EAB308 !important; }
+  body[data-skin="fabrica"] .pill { color:#1C1C1C; }
+  body[data-skin="fabrica"] .pill.sim { background:#FEF3C7; border-color:#FCD34D; color:#92400E; }
+  body[data-skin="fabrica"] .pill.ok { background:#DCFCE7; border-color:#86EFAC; color:#166534; }
+  body[data-skin="fabrica"] .pill.err { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+  body[data-skin="industrial"] .product .name { font-size:clamp(13px,1.05vw,17px) !important; }
+
+  .ear { display:none; }
+  /* Fábrica clara · Lagun protagonista y redondo */
+  body[data-skin="fabrica"] .face { flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:12px; padding:46px 16px 22px;
+    border-radius:18px; background:radial-gradient(circle at 50% 38%,#FFFBEB 0,#FEF3C7 45%,#FDE68A 100%); border:2px solid #1C1C1C; position:relative; overflow:hidden; }
+  body[data-skin="fabrica"] .face::before { content:""; position:absolute; left:0; right:0; bottom:0; height:8px; background:repeating-linear-gradient(45deg,#FACC15 0 12px,#1C1C1C 12px 24px); }
+  body[data-skin="fabrica"] .head { width:170px; height:170px; border-radius:50%; margin:14px 0 4px; background:radial-gradient(circle at 35% 30%,#FEF08A,#FACC15 55%,#EAB308);
+    border:4px solid #1C1C1C; box-shadow:0 10px 0 rgba(28,28,28,.15), 0 18px 30px rgba(161,98,7,.25); animation:float 3.2s ease-in-out infinite; }
+  body[data-skin="fabrica"] .head::before { top:-26px; width:6px; height:24px; background:#1C1C1C; }
+  body[data-skin="fabrica"] .head::after { top:-40px; width:20px; height:20px; background:#DC2626; border:3px solid #1C1C1C; box-shadow:0 0 14px #F87171; }
+  body[data-skin="fabrica"] .screen { inset:34px 22px 40px; border-radius:50px; background:#1C1C1C; }
+  body[data-skin="fabrica"] .eye { top:20px; width:24px; height:30px; background:#FACC15; box-shadow:0 0 14px #FACC15; }
+  body[data-skin="fabrica"] .eye.l { left:26px; } body[data-skin="fabrica"] .eye.r { right:26px; }
+  body[data-skin="fabrica"] .mouth { bottom:12px; width:34px; height:8px; background:#FACC15; }
+  body[data-skin="fabrica"] .ear { display:block; position:absolute; top:62px; width:18px; height:44px; background:#1C1C1C; border-radius:9px; }
+  body[data-skin="fabrica"] .ear.l { left:-14px; } body[data-skin="fabrica"] .ear.r { right:-14px; }
+  body[data-skin="fabrica"] .head.listening { box-shadow:0 0 0 10px rgba(220,38,38,.25), 0 18px 30px rgba(161,98,7,.25); }
+  body[data-skin="fabrica"] .head.talking { box-shadow:0 0 0 10px rgba(250,204,21,.45), 0 18px 30px rgba(161,98,7,.25); }
+  body[data-skin="fabrica"] .head.working .eye { background:#4ADE80; box-shadow:0 0 14px #4ADE80; }
+  body[data-skin="fabrica"] .botname { font-size:30px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+  body[data-skin="fabrica"] .botstate { font-size:15px; color:#78350F; }
+  body[data-skin="fabrica"] .face .btn.mic { width:100%; max-width:260px; padding:12px; font-size:16px; margin-bottom:6px; }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+
+  /* Fábrica clara · Lagun estilo original, en grande */
+  body[data-skin="fabrica"] .face { background:linear-gradient(160deg,#2E2A5C,#1E1B4B 55%,#0F172A); border:2px solid #1C1C1C; color:#F8FAFC; }
+  body[data-skin="fabrica"] .head { width:190px; height:152px; border-radius:44px; border:none; background:linear-gradient(160deg,#7C5CFF,#22D3EE);
+    box-shadow:0 14px 40px rgba(124,92,255,.45); }
+  body[data-skin="fabrica"] .ear { display:none; }
+  body[data-skin="fabrica"] .head::before { top:-26px; width:7px; height:26px; background:#A5B4FC; border-radius:4px; }
+  body[data-skin="fabrica"] .head::after { top:-42px; width:20px; height:20px; border:none; background:#F472B6; box-shadow:0 0 16px #F472B6; }
+  body[data-skin="fabrica"] .screen { inset:20px 18px; border-radius:28px; background:#0B1020; }
+  body[data-skin="fabrica"] .eye { top:28px; width:28px; height:34px; background:#67E8F9; box-shadow:0 0 16px #67E8F9; }
+  body[data-skin="fabrica"] .eye.l { left:34px; } body[data-skin="fabrica"] .eye.r { right:34px; }
+  body[data-skin="fabrica"] .mouth { bottom:18px; width:44px; height:10px; background:#67E8F9; }
+  body[data-skin="fabrica"] .head.listening { box-shadow:0 0 0 10px rgba(244,114,182,.35), 0 14px 40px rgba(124,92,255,.45); }
+  body[data-skin="fabrica"] .head.talking { box-shadow:0 0 0 10px rgba(103,232,249,.35), 0 14px 40px rgba(124,92,255,.45); }
+  body[data-skin="fabrica"] .head.working .eye { background:#FDE68A; box-shadow:0 0 16px #FDE68A; }
+  body[data-skin="fabrica"] .botname { color:#F8FAFC; text-transform:none; letter-spacing:.02em; font-size:32px; }
+  body[data-skin="fabrica"] .botstate { color:#A5B4FC; }
+
+  /* Fábrica clara · Lagun original en amarillo/negro/blanco */
+  body[data-skin="fabrica"] .face { background:radial-gradient(circle at 50% 35%,#FFFFFF 0,#FFFBEB 50%,#FEF3C7 100%); border:2px solid #1C1C1C; color:#1C1C1C; }
+  body[data-skin="fabrica"] .head { background:linear-gradient(160deg,#FDE047,#FACC15 60%,#EAB308); border:4px solid #1C1C1C;
+    box-shadow:0 10px 0 rgba(28,28,28,.12), 0 18px 34px rgba(161,98,7,.28); }
+  body[data-skin="fabrica"] .head::before { background:#1C1C1C; }
+  body[data-skin="fabrica"] .head::after { background:#FFFFFF; border:4px solid #1C1C1C; box-shadow:0 0 0 3px #FACC15; }
+  body[data-skin="fabrica"] .screen { background:#1C1C1C; }
+  body[data-skin="fabrica"] .eye { background:#FFFFFF; box-shadow:0 0 14px rgba(255,255,255,.8); }
+  body[data-skin="fabrica"] .mouth { background:#FACC15; }
+  body[data-skin="fabrica"] .head.listening { box-shadow:0 0 0 10px rgba(28,28,28,.18), 0 18px 34px rgba(161,98,7,.28); }
+  body[data-skin="fabrica"] .head.talking { box-shadow:0 0 0 10px rgba(250,204,21,.5), 0 18px 34px rgba(161,98,7,.28); }
+  body[data-skin="fabrica"] .head.working .eye { background:#FACC15; box-shadow:0 0 16px #FACC15; }
+  body[data-skin="fabrica"] .botname { color:#1C1C1C; }
+  body[data-skin="fabrica"] .botstate { color:#78350F; }
+  body[data-skin="fabrica"] .face .btn.mic { background:#1C1C1C; color:#FACC15; border:2px solid #1C1C1C; }
+
+  /* Fábrica clara · Lagun en azul */
+  body[data-skin="fabrica"] .face { background:radial-gradient(circle at 50% 35%,#FFFFFF 0,#EFF6FF 55%,#DBEAFE 100%); }
+  body[data-skin="fabrica"] .head { background:linear-gradient(160deg,#60A5FA,#2563EB 60%,#1D4ED8);
+    box-shadow:0 10px 0 rgba(28,28,28,.12), 0 18px 34px rgba(37,99,235,.35); }
+  body[data-skin="fabrica"] .head::after { box-shadow:0 0 0 3px #3B82F6; }
+  body[data-skin="fabrica"] .mouth { background:#60A5FA; }
+  body[data-skin="fabrica"] .head.talking { box-shadow:0 0 0 10px rgba(59,130,246,.4), 0 18px 34px rgba(37,99,235,.35); }
+  body[data-skin="fabrica"] .head.listening { box-shadow:0 0 0 10px rgba(250,204,21,.55), 0 18px 34px rgba(37,99,235,.35); }
+  body[data-skin="fabrica"] .botstate { color:#1E40AF; }
+
+  /* 6 · Neón claro (diseño original en modo claro) */
+  body[data-skin="neonclaro"] { --bg:#F6F7FC; --panel:#FFFFFF; --panel2:#F1F2FA; --line:#E2E5F1; --text:#151A30; --muted:#5B6485; --accent:#7C5CFF;
+    background:
+      radial-gradient(900px 500px at 0% -10%, rgba(124,92,255,.16), transparent 60%),
+      radial-gradient(800px 500px at 110% 10%, rgba(34,211,238,.14), transparent 60%),
+      linear-gradient(rgba(21,26,48,.035) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(90deg, rgba(21,26,48,.035) 1px, transparent 1px) 0 0/32px 32px,
+      #F6F7FC; color:var(--text); }
+  body[data-skin="neonclaro"] .card { background:rgba(255,255,255,.85); border:1px solid #E2E5F1; box-shadow:0 8px 24px rgba(76,61,160,.08); }
+  body[data-skin="neonclaro"] .stat { background:#fff; border:1px solid #E2E5F1; box-shadow:0 4px 14px rgba(76,61,160,.06); }
+  body[data-skin="neonclaro"] .titles input { background:linear-gradient(90deg,#151A30,#6D4AFF 60%,#0891B2); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+  body[data-skin="neonclaro"] .titles input.sub { -webkit-text-fill-color:var(--muted); background:none; }
+  body[data-skin="neonclaro"] .logo { box-shadow:0 8px 20px rgba(124,92,255,.3); }
+  body[data-skin="neonclaro"] .face { background:linear-gradient(135deg,#EDE9FE,#E0F7FC); border:1px solid #DDD6FE; }
+  body[data-skin="neonclaro"] .msg.user { color:#fff; }
+  body[data-skin="neonclaro"] .msg.bot { background:#F4F3FF; border-color:#E4E0FF; }
+  body[data-skin="neonclaro"] .chatin input { background:#fff; }
+  body[data-skin="neonclaro"] .product { box-shadow:0 10px 24px rgba(21,26,48,.14); }
+  body[data-skin="neonclaro"] .kit { background:#fff; }
+  body[data-skin="neonclaro"] .kit .prog { color:#0E7490; }
+  body[data-skin="neonclaro"] .link { color:#6D4AFF; } body[data-skin="neonclaro"] .link:hover { color:#151A30; }
+  body[data-skin="neonclaro"] a { color:#4F46E5; }
+  body[data-skin="neonclaro"] .pill.sim { background:#FEF3C7; border-color:#FCD34D; color:#92400E; }
+  body[data-skin="neonclaro"] .pill.ok { background:#DCFCE7; border-color:#86EFAC; color:#166534; }
+  body[data-skin="neonclaro"] .pill.err { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+  body[data-skin="neonclaro"] td .mark.sel-ok { background:#DCFCE7; } body[data-skin="neonclaro"] td .mark.sel-ko { background:#FEE2E2; }
+  body[data-skin="neonclaro"] .toast { background:#fff; color:#151A30; box-shadow:0 10px 30px rgba(21,26,48,.15); }
+
+  /* Neón claro: cuadrícula y bordes más marcados */
+  body[data-skin="neonclaro"] { background:
+      radial-gradient(900px 500px at 0% -10%, rgba(124,92,255,.14), transparent 60%),
+      radial-gradient(800px 500px at 110% 10%, rgba(34,211,238,.12), transparent 60%),
+      linear-gradient(rgba(91,75,200,.13) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(90deg, rgba(91,75,200,.13) 1px, transparent 1px) 0 0/32px 32px,
+      #F6F7FC; }
+  body[data-skin="neonclaro"] .card, body[data-skin="neonclaro"] .stat, body[data-skin="neonclaro"] .kit { border:1.5px solid #CBD0E6; }
+
+  .btn.done { width:100%; font-size:17px; padding:14px; margin-bottom:10px; color:#fff; background:linear-gradient(135deg,#22c55e,#15803d); box-shadow:0 8px 20px rgba(34,197,94,.3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🤖</div>
+      <div class="titles">
+        <input id="title" aria-label="Nombre del proyecto">
+        <input id="subtitle" class="sub" aria-label="Lema">
+      </div>
+    </div>
+    <div class="topright">
+      <button id="skin" class="skin modebtn" type="button" aria-label="Cambiar modo claro u oscuro"></button>
+      <select id="theme" class="theme" aria-label="Temática"></select>
+      <span id="status" class="pill">Comprobando SenseCraft…</span>
+    </div>
+  </header>
+
+  <div class="dash">
+    <aside class="col-left">
+      <section class="card assistant">
+        <div class="face">
+          <div class="head" id="head"><div class="ear l"></div><div class="ear r"></div><div class="screen"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div></div>
+          <div class="facetext">
+            <div class="botname" id="botname">Lagun</div>
+            <div class="botstate" id="botstate">Listo para ayudarte</div>
+          </div>
+          <button class="btn mic" id="talk">🎙️ Hablar</button>
+        </div>
+        <div class="chat">
+          <div class="msgs" id="msgs"></div>
+          <div class="sugg" id="sugg"></div>
+          <form class="chatin" id="chatform"><input id="chatinput" placeholder="Escribe a Lagun… («algo para medir distancias»)" autocomplete="off"><button class="btn send" type="submit">➤</button></form>
+        </div>
+      </section>
+
+      <section class="card robotcard">
+        <div class="status">
+          <div class="robot" id="robotIcon">🦾</div>
+          <div style="flex:1;min-width:0">
+            <div class="big" id="stBig">Listo para pedidos</div>
+            <div class="small" id="stSmall">Pulsa un producto, usa las teclas 1-4 o habla con Lagun.</div>
+          </div>
+        </div>
+        <div class="bar"><div id="bar"></div></div>
+        <button class="btn done hidden" id="done">✅ PIEZA ENTREGADA <span class="kbd">Enter</span></button>
+        <button class="btn stop" id="stop">⏹ PARAR ROBOT <span class="kbd">Esc</span></button>
+        <button class="btn mic hidden" id="mic">🎤</button>
+        <div class="heard" id="heard"></div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead"><h2>Cola de pedidos</h2><button class="link" id="clearQ">Vaciar</button></div>
+        <ul class="queue" id="queue"></ul>
+      </section>
+    </aside>
+
+    <main class="col-right">
+      <div class="sectitle">Componentes <span>teclas 1-4</span></div>
+      <section class="products" id="products"></section>
+
+      <div class="sectitle">Kits de montaje <span>se preparan pieza a pieza</span></div>
+      <section class="kits" id="kits"></section>
+
+      <div class="sectitle">Rendimiento</div>
+      <section class="stats">
+        <div class="stat s1"><b id="sTotal">0</b><span>Pedidos</span></div>
+        <div class="stat s2"><b id="sRate">—</b><span>Tasa de éxito</span></div>
+        <div class="stat s3"><b id="sTime">—</b><span>Tiempo medio</span></div>
+        <div class="stat s4"><b id="sStreak">0</b><span>Éxitos seguidos</span></div>
+      </section>
+    </main>
+  </div>
+
+  <section class="card">
+    <div class="cardhead"><h2>Historial</h2>
+      <div><button class="link" id="exportCsv">⬇ Exportar CSV</button><button class="link" id="clearH">Borrar</button></div></div>
+    <table>
+      <thead><tr><th>Hora</th><th>Pedido</th><th>Duración</th><th>Estado</th><th>¿Bien?</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <details id="settings">
+      <summary>⚙️ Configuración (modelos, tiempos, modo simulación)</summary>
+      <div class="cfg" id="cfg"></div>
+      <div class="row">
+        <label>Servidor <input type="text" id="api" size="26"></label>
+        <label>Segundos de movimiento <input type="number" id="secs" min="5" max="300" style="width:70px"></label>
+        <label>Segundos de arranque <input type="number" id="boot" min="0" max="120" style="width:70px"></label>
+        <label><input type="checkbox" id="sim"> Modo simulación (sin robot)</label>
+        <label><input type="checkbox" id="speak"> Respuestas habladas</label>
+        <label><input type="checkbox" id="clips"> Voz grabada (Tornillo)</label>
+        <label>Voz de Lagun <select id="voice"></select></label>
+        <button class="link" id="voiceTest" type="button">🔊 Probar voz</button>
+        <button class="btn ghost" id="reload">↻ Recargar modelos</button>
+      </div>
+      <p class="row" style="margin-top:8px">SenseCraft tarda ~30 s en arrancar el modelo (CPU). «Arranque» es esa espera; «Movimiento» es lo que dura la tarea.</p>
+      <pre id="log"></pre>
+    </details>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS = [
+  { key:"azul",  label:"Azul",  dot:"#3b82f6", words:["azul","blue"] },
+  { key:"rojo",  label:"Rojo",  dot:"#ef4444", words:["rojo","roja","red"] },
+  { key:"verde", label:"Verde", dot:"#22c55e", words:["verde","green"] },
+  { key:"negro", label:"Negro", dot:"#64748b", words:["negro","negra","black"] },
+];
+const THEMES = {
+  almacen:    { name:"Almacén de robótica", title:"PickBot · Almacén de componentes", sub:"Un brazo robótico que aprende por imitación y prepara pedidos de componentes de robótica",
+                items:{ azul:["📡","Sensores"], rojo:["⚙️","Servomotores"], verde:["🔋","Baterías"], negro:["💾","Microprocesadores"] } },
+  farmacia:   { name:"Farmacia / hospital", title:"PickBot · Farmacia hospitalaria", sub:"El robot prepara la medicación que pide el personal sanitario",
+                items:{ azul:["💊","Analgésicos"], rojo:["🩸","Antibióticos"], verde:["🌿","Antiinflamatorios"], negro:["🧴","Material de curas"] } },
+  laboratorio:{ name:"Laboratorio", title:"PickBot · Laboratorio", sub:"Manipulación de muestras sin contacto humano",
+                items:{ azul:["🧪","Muestra A"], rojo:["🧬","Muestra B"], verde:["🔬","Muestra C"], negro:["⚗️","Reactivo"] } },
+  colores:    { name:"Solo colores", title:"PickBot", sub:"Clasificación de piezas por color",
+                items:{ azul:["🟦","Pieza azul"], rojo:["🟥","Pieza roja"], verde:["🟩","Pieza verde"], negro:["⬛","Pieza negra"] } },
+};
+
+const KITS = [
+  { id:"seguidor", icon:"🚗", name:"Kit robot seguidor de línea", desc:"Sensores de suelo, motores, batería y controlador.",
+    words:["seguidor","línea","linea","coche"], parts:["azul","rojo","verde","negro"] },
+  { id:"brazo", icon:"🦾", name:"Kit brazo robótico", desc:"Articulaciones con servomotores y su controlador.",
+    words:["brazo"], parts:["rojo","negro","verde"] },
+  { id:"meteo", icon:"🌦️", name:"Kit estación meteorológica", desc:"Sensores ambientales con su placa y alimentación.",
+    words:["meteo","meteorológica","meteorologica","estación","estacion"], parts:["azul","negro","verde"] },
+];
+let kitRun = null;   // { kit, ids:Set, done:number, total:number }
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("pickbot." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("pickbot." + k, JSON.stringify(v)); } catch {} },
+};
+let themeKey = store.get("theme", "almacen");
+let cfg = store.get("cfg", {});
+COLORS.forEach(c => cfg[c.key] = Object.assign({ model:"", name:"", icon:"", stock:10 }, cfg[c.key] || {}));
+let history = store.get("history", []);
+let models = [];
+let queue = [];
+let active = null;
+
+const S = {
+  api:  () => $("api").value.replace(/\/$/, ""),
+  sim:  () => $("sim").checked,
+  secs: () => Math.max(5, +$("secs").value || 30),
+  boot: () => S.sim() ? 0 : Math.max(0, +$("boot").value || 0),
+};
+$("api").value = store.get("api", "https://127.0.0.1:18100").replace("http://127.0.0.1:18100","https://127.0.0.1:18100");
+$("secs").value = store.get("secs", 30);
+$("boot").value = store.get("boot", 35);
+$("boot").onchange = () => store.set("boot", +$("boot").value);
+$("sim").checked = store.get("sim", false);
+$("speak").checked = store.get("speak", true);
+["api","secs"].forEach(id => $(id).onchange = () => { store.set(id, id === "secs" ? +$(id).value : $(id).value); if (id === "api") loadModels(); });
+$("sim").onchange = () => { store.set("sim", S.sim()); loadModels(); };
+$("speak").onchange = () => store.set("speak", $("speak").checked);
+
+function item(color) {
+  const t = THEMES[themeKey].items[color];
+  return { icon: cfg[color].icon || t[0], name: cfg[color].name || t[1] };
+}
+function log(msg) { const p = $("log"); p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + p.textContent; }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ===== Voz grabada (ElevenLabs · Tornillo) ===== */
+// Cada frase fija tiene un audio en voz/<clave>.mp3 generado con generar_voz.sh
+function clipKey(text) {
+  const t = String(text).normalize("NFC").replace(/[\p{Extended_Pictographic}️‍]/gu, "").replace(/\s+/g, " ").trim().toLowerCase();
+  let h = 5381; for (const ch of t) h = ((h << 5) + h + ch.codePointAt(0)) >>> 0;
+  return h.toString(16);
+}
+function cleanSpoken(text) { return String(text).replace(/[\p{Extended_Pictographic}️‍]/gu, "").replace(/\s+/g, " ").trim(); }
+function allPhrases() {
+  const P = new Set();
+  PRESENTATION.forEach(x => P.add(x));
+  ["¡Hola! Soy Lagun, el asistente del almacén. ¿Qué componente necesitas?", "¡Buenas! ¿Qué te preparo hoy?",
+   "Soy Lagun («compañero» en euskera), el asistente de este almacén de robótica. Controlo un brazo SO-101 que aprendió a coger piezas viendo cómo lo hacían mis creadoras.",
+   "Puedo prepararte sensores, servomotores, baterías y microprocesadores, o kits completos. Dímelo con tus palabras, por ejemplo: «necesito algo para medir distancias» o «prepárame el kit del brazo».",
+   "Aprendí por imitación: me enseñaron moviendo un brazo guía muchas veces mientras grababa con mis cámaras. Después una red neuronal llamada ACT aprendió a repetir esos movimientos.",
+   "Ahora mismo estoy libre. ¿Te preparo algo?", "¡De nada! Para eso estoy.", "¡A ti! ¿Algo más?", "Un placer.",
+   "¿Por qué el robot cruzó la calle? Porque estaba programado para ello.", "Mi comida favorita son los microchips… con salsa de bytes.",
+   "¡Hasta luego! Aquí estaré cuando me necesites.",
+   "Mmm, no te he entendido. Prueba con «necesito un sensor» o «prepárame el kit del brazo».",
+   "No sé qué componente es ese. Tengo sensores, servomotores, baterías y microprocesadores.",
+   "¡Parado! He detenido el robot y vaciado la cola.", "Robot detenido"].forEach(x => P.add(x));
+  COLORS.forEach(c => { const n = item(c.key).name;
+    [`Marchando ${n}`, `Pedido enviado: ${n}`, `${n}, en cola`, `${n} todavía no está disponible`, `No queda stock de ${n}`,
+     `¡Claro! Te preparo ${n}.`, `Vale, ${n} en camino.`, `Entendido: ${n}.`, `Estoy preparando ${n}.`].forEach(x => P.add(x)); });
+  KITS.forEach(k => {
+    P.add(`Perfecto, preparo el ${k.name}: ${k.parts.map(c => item(c).name).join(", ")}.`);
+    P.add(`Preparando ${k.name}: ${k.parts.length} componentes`); P.add(`${k.name} completo`); });
+  return [...P].map(cleanSpoken);
+}
+const missingClips = new Set();
+function playClip(text, onEnd, onFail) {
+  if (!store.get("clips", true)) return onFail();
+  const key = clipKey(text);
+  if (missingClips.has(key)) return onFail();
+  const a = new Audio(`voz/${key}.mp3`);
+  let started = false;
+  a.onplaying = () => { started = true; $("head") && $("head").classList.add("talking"); };
+  a.onended = () => { $("head") && $("head").classList.remove("talking"); onEnd(); };
+  a.onerror = () => { if (!started) { missingClips.add(key); onFail(); } else { $("head") && $("head").classList.remove("talking"); onEnd(); } };
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  if (window.__clip) { try { window.__clip.pause(); } catch {} }
+  window.__clip = a;
+  a.play().catch(() => { if (!started) onFail(); });
+}
+
+/* ===== Voz de Lagun ===== */
+// Prioridad: voces neuronales de Edge (Natural) > Google > Microsoft de escritorio
+function voiceScore(v) {
+  const n = v.name.toLowerCase();
+  if (!v.lang || !v.lang.toLowerCase().startsWith("es")) return -1;
+  let sc = 0;
+  if (n.includes("natural") || n.includes("online")) sc += 100;
+  if (n.includes("google")) sc += 60;
+  if (v.lang.toLowerCase() === "es-es") sc += 10;
+  if (/elvira|alvaro|ximena|dalia|jorge|helena|laura|pablo/.test(n)) sc += 5;
+  return sc;
+}
+function esVoices() { return (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter(v => voiceScore(v) >= 0).sort((a, b) => voiceScore(b) - voiceScore(a)); }
+function currentVoice() {
+  const vs = esVoices(); const want = store.get("voice", "");
+  return vs.find(v => v.name === want) || vs[0] || null;
+}
+function fillVoices() {
+  const sel = $("voice"); if (!sel) return;
+  const vs = esVoices(), cur = currentVoice();
+  sel.innerHTML = vs.length ? vs.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("") : '<option value="">(sin voces en español)</option>';
+  if (cur) sel.value = cur.name;
+}
+if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = fillVoices; setTimeout(fillVoices, 300); }
+function say(text, after) {
+  if (!$("speak").checked) { if (after) setTimeout(after, 300); return; }
+  playClip(text, () => { if (after) after(); }, () => sayTTS(text, after));
+}
+function sayTTS(text, after) {
+  if (!window.speechSynthesis) { if (after) setTimeout(after, 300); return; }
+  speechSynthesis.cancel();
+  // Frase a frase: suena más natural y evita que Chrome corte los textos largos
+  const parts = String(text).replace(/[🤖📦✅❌⏹🔋📡⚙️💾]/gu, "").match(/[^.!?¿¡]*[¡¿]?[^.!?]*[.!?]+|[^.!?]+$/g) || [text];
+  const v = currentVoice();
+  let i = 0;
+  const next = () => {
+    if (i >= parts.length) { $("head") && $("head").classList.remove("talking"); if (after) after(); return; }
+    const u = new SpeechSynthesisUtterance(parts[i++].trim());
+    u.lang = v ? v.lang : "es-ES"; if (v) u.voice = v;
+    const natural = v && /natural|online|google/i.test(v.name);
+    u.rate = natural ? 1.0 : 0.95; u.pitch = natural ? 1.0 : 1.05;
+    u.onstart = () => $("head") && $("head").classList.add("talking");
+    u.onend = u.onerror = () => next();
+    speechSynthesis.speak(u);
+  };
+  next();
+}
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = "pill " + (cls || ""); }
+function setRobot(big, small, working) {
+  $("stBig").textContent = big; $("stSmall").innerHTML = small;
+  $("done").classList.toggle("hidden", !active);
+  $("robotIcon").classList.toggle("working", !!working);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(S.api() + path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
+  const text = await res.text();
+  let body; try { body = JSON.parse(text); } catch { body = text; }
+  if (!res.ok) {
+    const d = typeof body === "object" ? (body.debug_message || body.detail?.debug_message || body.message || JSON.stringify(body.detail || body)) : body;
+    throw new Error(`${res.status}: ${d}`);
+  }
+  if (body && typeof body === "object" && !Array.isArray(body) && "code" in body && "result" in body) {
+    if (body.code !== 200 && body.code !== 0) throw new Error(`${body.code}: ${body.msg || JSON.stringify(body.detail)}`);
+    return body.result;
+  }
+  return body;
+}
+
+async function loadModels() {
+  if (S.sim()) { models = []; setStatus("Modo simulación", "sim"); renderAll(); return; }
+  try {
+    models = await api("/api/models");
+    COLORS.forEach(c => {
+      if (cfg[c.key].model && !models.some(m => m.model_id === cfg[c.key].model)) {
+        log(`El modelo de ${c.label} ya no existe en SenseCraft; reasignando.`);
+        cfg[c.key].model = "";
+      }
+      if (!cfg[c.key].model) {
+        const m = models.find(m => [m.display_name, m.name, m.dataset_name, m.task_text].join(" ").toLowerCase().includes(c.key));
+        if (m) cfg[c.key].model = m.model_id;
+      }
+    });
+    store.set("cfg", cfg);
+    setStatus(`Conectado a SenseCraft · ${models.length} modelo(s)`, "ok");
+    log(`Modelos: ${models.map(m => `${m.display_name || m.name || m.model_id} [${m.status}]`).join(" · ") || "ninguno"}`);
+    if (!active) setRobot("Listo para pedidos", models.length ? "Pulsa un producto, usa las teclas 1-4 o di «pásame el rojo»." : "Conectado, pero aún no hay modelos. Impórtalos y pulsa ↻ Recargar modelos.");
+  } catch (e) {
+    models = [];
+    const url = S.api() + "/api/models";
+    setStatus("SenseCraft no responde", "err");
+    if (!active) setRobot("No conecto con SenseCraft",
+      `1) Abre SenseCraft. 2) La primera vez abre <a href="${url}" target="_blank">${url}</a> → <b>Configuración avanzada → Acceder</b>. 3) Pulsa ↻ Recargar modelos.`);
+    log("No se pudo conectar: " + e.message);
+  }
+  renderAll();
+}
+const modelLabel = id => { const m = models.find(m => m.model_id === id); return m ? (m.display_name || m.name || m.model_id) : (id || "sin modelo"); };
+const ready = color => S.sim() || !!cfg[color].model;
+
+function renderTheme() {
+  const t = THEMES[themeKey];
+  $("theme").innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}" ${k === themeKey ? "selected" : ""}>🎨 ${v.name}</option>`).join("");
+  $("title").value = store.get("title." + themeKey, t.title);
+  $("subtitle").value = store.get("sub." + themeKey, t.sub);
+  document.title = $("title").value;
+}
+$("theme").onchange = () => { themeKey = $("theme").value; store.set("theme", themeKey); renderTheme(); renderAll(); };
+$("title").onchange = () => { store.set("title." + themeKey, $("title").value); document.title = $("title").value; };
+$("subtitle").onchange = () => store.set("sub." + themeKey, $("subtitle").value);
+
+function renderProducts() {
+  $("products").innerHTML = "";
+  COLORS.forEach((c, i) => {
+    const it = item(c.key);
+    const b = document.createElement("button");
+    b.className = `product c-${c.key}` + (active && active.color === c.key ? " busy" : "");
+    b.disabled = !ready(c.key);
+    b.innerHTML = `<div><div class="icon">${it.icon}</div><div class="name">${it.name}</div></div>
+      <div class="meta"><span>Stock: <b>${cfg[c.key].stock}</b> · ${S.sim() ? "simulación" : modelLabel(cfg[c.key].model)}</span><span class="key">${i + 1}</span></div>`;
+    b.title = b.disabled ? "Sin modelo asignado (⚙️ Configuración)" : `Pedir ${it.name}`;
+    b.onclick = () => request(c.key);
+    $("products").appendChild(b);
+  });
+}
+function renderQueue() {
+  const q = $("queue"); q.innerHTML = "";
+  if (!queue.length) { q.innerHTML = `<li class="empty" style="background:none;padding:0">No hay pedidos en espera.</li>`; return; }
+  queue.forEach((o, i) => {
+    const c = COLORS.find(c => c.key === o.color), it = item(o.color);
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="dot" style="background:${c.dot}"></span><span>${i + 1}. ${it.icon} ${it.name}${o.kit ? ` <small style="color:#67e8f9">· ${KITS.find(k => k.id === o.kit).icon} kit</small>` : ""}</span><button class="x" title="Quitar">✕</button>`;
+    li.querySelector(".x").onclick = () => { queue.splice(i, 1); renderQueue(); };
+    q.appendChild(li);
+  });
+}
+function renderHistory() {
+  const tb = $("history"); tb.innerHTML = "";
+  history.slice().reverse().forEach(h => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${h.time}</td><td>${h.icon} ${h.name}</td><td>${h.dur ? h.dur + " s" : "—"}</td><td>${h.state}</td>
+      <td><button class="mark ${h.ok === true ? "sel-ok" : ""}">✅</button><button class="mark ${h.ok === false ? "sel-ko" : ""}">❌</button></td>`;
+    const [bOk, bKo] = tr.querySelectorAll(".mark");
+    bOk.onclick = () => { h.ok = h.ok === true ? null : true; saveHistory(); };
+    bKo.onclick = () => { h.ok = h.ok === false ? null : false; saveHistory(); };
+    tb.appendChild(tr);
+  });
+  renderStats();
+}
+function renderStats() {
+  const marked = history.filter(h => h.ok === true || h.ok === false);
+  const ok = marked.filter(h => h.ok).length;
+  $("sTotal").textContent = history.length;
+  $("sRate").textContent = marked.length ? Math.round(100 * ok / marked.length) + " %" : "—";
+  const durs = history.filter(h => h.dur).map(h => h.dur);
+  $("sTime").textContent = durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) + " s" : "—";
+  let streak = 0; for (let i = history.length - 1; i >= 0 && history[i].ok === true; i--) streak++;
+  $("sStreak").textContent = streak;
+}
+function renderCfg() {
+  const box = $("cfg"); box.innerHTML = `<b>Color</b><b>Icono</b><b>Nombre visible</b><b>Modelo en SenseCraft</b><b>Stock</b>`;
+  COLORS.forEach(c => {
+    const t = THEMES[themeKey].items[c.key];
+    const lab = document.createElement("span"); lab.innerHTML = `<span style="color:${c.dot}">●</span> ${c.label}`;
+    const icon = Object.assign(document.createElement("input"), { value: cfg[c.key].icon, placeholder: t[0] });
+    const name = Object.assign(document.createElement("input"), { value: cfg[c.key].name, placeholder: t[1] });
+    const sel = document.createElement("select");
+    sel.innerHTML = `<option value="">— elige modelo —</option>` + models.map(m =>
+      `<option value="${m.model_id}" ${m.model_id === cfg[c.key].model ? "selected" : ""}>${m.display_name || m.name || m.model_id} (${m.status})</option>`).join("");
+    if (cfg[c.key].model && !models.some(m => m.model_id === cfg[c.key].model))
+      sel.innerHTML += `<option value="${cfg[c.key].model}" selected>${cfg[c.key].model} (no encontrado)</option>`;
+    const stock = Object.assign(document.createElement("input"), { type: "number", value: cfg[c.key].stock, min: 0 });
+    icon.onchange = () => { cfg[c.key].icon = icon.value.trim(); saveCfg(); };
+    name.onchange = () => { cfg[c.key].name = name.value.trim(); saveCfg(); };
+    sel.onchange = () => { cfg[c.key].model = sel.value; saveCfg(); };
+    stock.onchange = () => { cfg[c.key].stock = Math.max(0, +stock.value || 0); saveCfg(); };
+    box.append(lab, icon, name, sel, stock);
+  });
+}
+function renderKits() {
+  const box = $("kits"); if (!box) return; box.innerHTML = "";
+  KITS.forEach(k => {
+    const okAll = k.parts.every(c => ready(c) && cfg[c].stock > 0);
+    const b = document.createElement("button");
+    b.className = "kit" + (kitRun && kitRun.kit.id === k.id ? " running" : "");
+    b.disabled = !okAll || !!kitRun;
+    b.title = !okAll ? "Falta modelo o stock de algún componente" : `Preparar ${k.name}`;
+    b.innerHTML = `<div class="kt">${k.icon} ${k.name}</div><div class="kd">${k.desc}</div>
+      <div class="chips">${k.parts.map(c => { const it = item(c); return `<span class="chip">${it.icon} ${it.name}</span>`; }).join("")}</div>
+      <div class="prog">${kitRun && kitRun.kit.id === k.id ? `Preparando… ${kitRun.done}/${kitRun.total}` : ""}</div>`;
+    b.onclick = () => requestKit(k.id);
+    box.appendChild(b);
+  });
+}
+function requestKit(id) {
+  const k = KITS.find(k => k.id === id); if (!k) return;
+  const missing = k.parts.filter(c => !ready(c) || cfg[c].stock <= 0);
+  if (missing.length) { const n = missing.map(c => item(c).name).join(", "); toast(`No se puede preparar el kit: falta ${n}`); say(`Falta ${n} para el ${k.name}`); return; }
+  if (kitRun) { toast("Ya hay un kit en preparación"); return; }
+  kitRun = { kit:k, ids:new Set(), done:0, total:k.parts.length };
+  say(`Preparando ${k.name}: ${k.parts.length} componentes`);
+  toast(`${k.icon} ${k.name}: ${k.parts.length} componentes en cola`);
+  k.parts.forEach(c => { const o = { color:c, id:Date.now() + Math.random(), kit:k.id }; kitRun.ids.add(o.id); queue.push(o); });
+  renderQueue(); renderKits(); next();
+}
+function kitStep(order, delivered) {
+  if (!kitRun || !order || !kitRun.ids.has(order.id)) return;
+  kitRun.done++;
+  if (!delivered) { const k = kitRun.kit; queue = queue.filter(o => !kitRun.ids.has(o.id)); kitRun = null; renderQueue(); renderKits(); toast(`${k.name} cancelado`); return; }
+  if (kitRun.done >= kitRun.total) {
+    const k = kitRun.kit; kitRun = null;
+    history.push({ time:new Date().toLocaleTimeString(), icon:k.icon, name:k.name, color:"kit", state:"📦 Kit completo", dur:0, ok:null });
+    saveHistory(); toast(`${k.icon} ${k.name} completo`); setTimeout(() => say(`${k.name} completo`), 1500);
+  }
+  renderKits();
+}
+function saveCfg() { store.set("cfg", cfg); renderProducts(); renderQueue(); renderKits(); }
+function saveHistory() { store.set("history", history); renderHistory(); }
+function renderAll() { renderKits(); renderProducts(); renderQueue(); renderHistory(); renderCfg(); }
+
+function request(color) {
+  const it = item(color);
+  if (!ready(color)) { toast(`«${it.name}» aún no tiene modelo asignado`); say(`${it.name} todavía no está disponible`); return; }
+  if (cfg[color].stock <= 0) { toast(`Sin stock de ${it.name}`); say(`No queda stock de ${it.name}`); return; }
+  queue.push({ color, id: Date.now() + Math.random() });
+  renderQueue();
+  if (active) { toast(`${it.icon} ${it.name} añadido a la cola`); say(`${it.name}, en cola`); }
+  next();
+}
+
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ENDED = ["stopped","completed","finished","failed","error","cancelled","canceled"];
+async function waitRunEnded(id, maxMs = 25000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    try { const r = await api(`/api/runs/${id}`); if (ENDED.includes(String(r.status || "").toLowerCase())) return; }
+    catch (e) { return; }
+    await sleep(1000);
+  }
+}
+async function stopAllRuns() {
+  try {
+    const list = await api("/api/runs");
+    const runs = Array.isArray(list) ? list : (list.items || list.runs || []);
+    for (const r of runs) {
+      const id = r.run_id || r.id; const st = String(r.status || "").toLowerCase();
+      if (id && !ENDED.includes(st)) { try { await api(`/api/runs/${id}/stop`, { method: "POST" }); log(`Parado run colgado ${id}`); } catch {} }
+    }
+  } catch (e) { log("Listar runs: " + e.message); }
+}
+
+async function next() {
+  if (active || !queue.length) return;
+  const order = queue.shift(); renderQueue();
+  const it = item(order.color);
+  const rec = { time: new Date().toLocaleTimeString(), icon: it.icon, name: it.name, color: order.color, state: "⏳ Enviando…", dur: 0, ok: null };
+  history.push(rec); saveHistory();
+  const run = { ...order, rec, started: Date.now(), runId: null };
+  active = run;
+  renderProducts();
+  setRobot(`Preparando: ${it.icon} ${it.name}`, "Lanzando el modelo en SenseCraft…", true);
+  botMsg(`¡Marchando ${it.icon} ${it.name}! Voy a por ello.`, false); setBotState("Trabajando…", "working");
+  say(`Marchando ${it.name}`);
+  try {
+    if (S.sim()) run.runId = "sim";
+    else {
+      let res;
+      for (let i = 0; ; i++) {
+        try {
+          res = await api("/api/runs/local", { method: "POST",
+            body: JSON.stringify({ model_id: cfg[order.color].model, policy_device: "cpu", run_purpose: "direct" }) });
+          break;
+        } catch (e) {
+          // 409 = SenseCraft todavía tiene el pedido anterior en marcha: esperamos a que se libere
+          if (!String(e.message).startsWith("409") || i >= 30 || active !== run) throw e;
+          setRobot(`Preparando: ${it.icon} ${it.name}`, "Esperando a que el robot termine de soltar el pedido anterior…", true);
+          if (i === 0) await stopAllRuns();
+          await sleep(2000);
+        }
+      }
+      run.runId = res.run_id || res.runId;
+      log(`Iniciado ${run.runId} (${res.status})`);
+      run.poll = setInterval(async () => {
+        try {
+          const r = await api(`/api/runs/${run.runId}`);
+          const st = String(r.status || "").toLowerCase();
+          if (active === run) $("stSmall").textContent = `Estado en SenseCraft: ${r.status}`;
+          if (/fail|error/.test(st) && active === run) finish("❌ Error en el robot", false);
+          else if (/stop|complet|finish|succe|done|end|exit|terminat|cancel/.test(st) && active === run) finish("✅ Enviado", true);
+        } catch (e) { log("Estado: " + e.message); }
+      }, 1500);
+    }
+    if (active !== run) return;
+    rec.state = "🤖 En curso"; saveHistory();
+    const boot = S.boot() * 1000, move = S.secs() * 1000, total = boot + move;
+    run.tick = setInterval(() => {
+      const el = Date.now() - run.started;
+      $("bar").style.width = Math.min(100, 100 * el / total) + "%";
+      if (active !== run) return;
+      if (el < boot) $("stBig").textContent = `Arrancando el robot… ${Math.ceil((boot - el) / 1000)} s`;
+      else $("stBig").textContent = `Moviendo: ${it.icon} ${it.name} · ${Math.max(0, Math.ceil((total - el) / 1000))} s`;
+      if (S.sim()) $("stSmall").textContent = "Simulación";
+    }, 250);
+    run.timer = setTimeout(() => { if (active === run) finish("✅ Enviado", true); }, total);
+  } catch (e) {
+    log("Error al iniciar: " + e.message);
+    finish("❌ No se pudo lanzar", false, e.message);
+  }
+}
+
+async function finish(state, delivered, detail) {
+  const run = active; if (!run) return;
+  active = null;
+  clearTimeout(run.timer); clearInterval(run.poll); clearInterval(run.tick);
+  if (!S.sim() && run.runId && run.runId !== "sim") {
+    try { await api(`/api/runs/${run.runId}/stop`, { method: "POST" }); log(`Parado ${run.runId}`); }
+    catch (e) { log("Al parar: " + e.message); }
+    await waitRunEnded(run.runId);
+  }
+  run.rec.state = state; run.rec.dur = Math.round((Date.now() - run.started) / 1000);
+  if (delivered) cfg[run.color].stock = Math.max(0, cfg[run.color].stock - 1);
+  store.set("cfg", cfg); saveHistory();
+  $("bar").style.width = "0";
+  setRobot(delivered ? "📦 Pedido enviado" : "Pedido interrumpido",
+    detail ? detail : (queue.length ? "Cargando la siguiente pieza…" : "Listo para el siguiente pedido."), false);
+  if (delivered) { botMsg(`📦 ¡Pedido enviado! ${run.rec.icon} ${run.rec.name} ya está en la bandeja.`, false); say(`Pedido enviado: ${run.rec.name}`); toast(`📦 Pedido enviado: ${run.rec.icon} ${run.rec.name}`); }
+  else botMsg(`He parado el pedido de ${run.rec.name}.`, false);
+  setBotState(queue.length ? "Siguiente pedido…" : "Listo para ayudarte", queue.length ? "working" : "");
+  renderProducts();
+  kitStep(run, delivered);
+  if (queue.length) setTimeout(next, 300);
+}
+
+function emergencyStop(reason = "⏹ Parado manualmente") {
+  queue = []; renderQueue();
+  if (kitRun) { kitRun = null; renderKits(); }
+  if (active) finish(reason, false); else setRobot("Robot parado", "Cola vaciada.", false);
+  say("Robot detenido");
+}
+$("stop").onclick = () => emergencyStop();
+$("voice").onchange = () => store.set("voice", $("voice").value);
+$("clips").checked = store.get("clips", true); $("clips").onchange = () => { store.set("clips", $("clips").checked); missingClips.clear(); };
+$("voiceTest").onclick = () => { const was = $("speak").checked; $("speak").checked = true; say("¡Hola! Soy Lagun, el asistente del almacén. ¿Qué componente necesitas?", () => { $("speak").checked = was; }); };
+$("done").onclick = () => { if (active) finish("✅ Enviado", true); };
+document.addEventListener("keydown", e => { if (e.key === "Enter" && active && document.activeElement?.id !== "chatinput") { e.preventDefault(); finish("✅ Enviado", true); } });
+$("clearQ").onclick = () => { queue = []; renderQueue(); if (kitRun && !active) { kitRun = null; renderKits(); } };
+$("reload").onclick = loadModels;
+$("clearH").onclick = () => { if (confirm("¿Borrar todo el historial?")) { history = []; saveHistory(); } };
+$("exportCsv").onclick = () => {
+  const rows = [["hora","pedido","color","duracion_s","estado","entregado_bien"], ...history.map(h => [h.time, h.name, h.color, h.dur, h.state, h.ok === null ? "" : h.ok ? "si" : "no"])];
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })), download: "pedidos.csv" });
+  a.click();
+};
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, select, textarea")) return;
+  if (e.key === "Escape") emergencyStop("⏹ Parado (Esc)");
+  const n = +e.key; if (n >= 1 && n <= 4) request(COLORS[n - 1].key);
+});
+
+
+/* ================= Asistente Lagun ================= */
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const norm = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[¿?¡!.,;:]/g, " ").replace(/\s+/g, " ").trim();
+const INTENT_WORDS = {
+  azul:  ["azul","sensor","sensores","medir","distancia","detectar","detecta","ver ","luz","temperatura","ultrasonido","infrarrojo"],
+  rojo:  ["rojo","roja","servo","servomotor","servomotores","motor","motores","mover","girar","gira","rueda","articulacion","movimiento"],
+  verde: ["verde","bateria","baterias","pila","pilas","energia","carga","cargar","alimentacion","corriente"],
+  negro: ["negro","negra","microprocesador","microprocesadores","procesador","controlador","cerebro","placa","arduino","programar","chip","esp32","raspberry"],
+};
+function botMsg(text, speak = true) {
+  const d = document.createElement("div"); d.className = "msg bot"; d.textContent = text;
+  $("msgs").appendChild(d); $("msgs").scrollTop = 1e9;
+  if (speak) say(text);
+}
+function userMsg(text) {
+  const d = document.createElement("div"); d.className = "msg user"; d.textContent = text;
+  $("msgs").appendChild(d); $("msgs").scrollTop = 1e9;
+}
+function setBotState(text, cls) {
+  $("botstate").textContent = text;
+  $("head").classList.remove("working", "listening");
+  if (cls) $("head").classList.add(cls);
+}
+function findProducts(t) {
+  const hits = [];
+  for (const c of COLORS) {
+    const words = [...INTENT_WORDS[c.key], norm(item(c.key).name)];
+    let best = -1;
+    for (const w of words) { const i = (" " + t + " ").indexOf(" " + norm(w)); if (i >= 0 && (best < 0 || i < best)) best = i; }
+    if (best >= 0) hits.push({ c: c.key, i: best });
+  }
+  return hits.sort((a, b) => a.i - b.i).map(h => h.c);
+}
+
+/* ===== Presentación de Lagun ===== */
+const PRESENTATION = [
+  "¡Hola a todos! Soy Lagun, que en euskera significa compañero. Soy el asistente de este almacén de componentes de robótica.",
+  "Controlo un brazo robótico SO-101. Nadie me ha programado los movimientos: aprendí por imitación. Mis creadoras movieron el brazo a mano unas cuarenta veces por cada pieza, y yo aprendí a hacerlo solo.",
+  "En el almacén tengo cuatro tipos de componentes: sensores, servomotores, baterías y microprocesadores. Cada uno tiene su propio modelo de inteligencia artificial.",
+  "Podéis pedirme una pieza con un botón, con el teclado, o simplemente hablándome. Y si necesitáis montar algo, os preparo un kit completo, pieza a pieza.",
+  "¿Queréis probarlo? Decidme qué componente necesitáis."
+];
+let presenting = false;
+function presentation() {
+  if (presenting) return;
+  presenting = true; setBotState("Presentándose…", "");
+  let i = 0;
+  const step = () => {
+    if (i >= PRESENTATION.length) { presenting = false; setBotState("Listo para ayudarte", ""); return; }
+    const text = PRESENTATION[i++];
+    botMsg(text, false);
+    say(text, () => setTimeout(step, 400));
+  };
+  step();
+}
+
+function handleUtterance(raw) {
+  const t = norm(raw);
+  if (!t) return;
+  userMsg(raw);
+  const has = (...w) => w.some(x => t.includes(x));
+  if (/\b(parar|parale|stop|detente|alto|quieto)\b/.test(t) || /^para\b(?! (medir|mover|que|cargar|programar|ver|detectar|el kit))/.test(t) || /\bpara (el|al) robot\b/.test(t)) { emergencyStop("⏹ Parado por Lagun"); return botMsg("¡Parado! He detenido el robot y vaciado la cola."); }
+  if (has("presentate","presentarte","presentacion","presenta el proyecto","explica el proyecto","explicanos el proyecto","que haces aqui")) return presentation();
+  const kit = KITS.find(k => k.words.some(w => t.includes(norm(w))));
+  if (kit) { botMsg(`Perfecto, preparo el ${kit.name}: ${kit.parts.map(c => item(c).name).join(", ")}.`); return requestKit(kit.id); }
+  const prods = findProducts(t);
+  if (prods.length) {
+    const names = prods.map(c => item(c).name);
+    botMsg(prods.length === 1 ? pick([`¡Claro! Te preparo ${names[0]}.`, `Vale, ${names[0]} en camino.`, `Entendido: ${names[0]}.`])
+                              : `De acuerdo, te preparo ${names.slice(0, -1).join(", ")} y ${names.at(-1)}.`);
+    prods.forEach(c => request(c));
+    return;
+  }
+  if (has("hola","buenas","buenos dias","buenas tardes","hey","que tal")) return botMsg(pick(["¡Hola! Soy Lagun, el asistente del almacén. ¿Qué componente necesitas?", "¡Buenas! ¿Qué te preparo hoy?"]));
+  if (has("quien eres","como te llamas","que eres")) return botMsg("Soy Lagun («compañero» en euskera), el asistente de este almacén de robótica. Controlo un brazo SO-101 que aprendió a coger piezas viendo cómo lo hacían mis creadoras.");
+  if (has("que puedes","ayuda","que sabes","como funciona","que haces")) return botMsg("Puedo prepararte sensores, servomotores, baterías y microprocesadores, o kits completos. Dímelo con tus palabras, por ejemplo: «necesito algo para medir distancias» o «prepárame el kit del brazo».");
+  if (has("como aprendiste","como has aprendido","aprendizaje","entrenado","ia ","inteligencia")) return botMsg("Aprendí por imitación: me enseñaron moviendo un brazo guía muchas veces mientras grababa con mis cámaras. Después una red neuronal llamada ACT aprendió a repetir esos movimientos.");
+  if (has("stock","cuanto queda","cuantos quedan","inventario","existencias")) return botMsg("Inventario: " + COLORS.map(c => `${item(c.key).name} ${cfg[c.key].stock}`).join(", ") + ".");
+  if (has("que estas haciendo","que haces ahora","cuanto falta","estado")) return botMsg(active ? `Estoy preparando ${active.rec.name}${queue.length ? ` y tengo ${queue.length} pedido(s) en cola` : ""}.` : "Ahora mismo estoy libre. ¿Te preparo algo?");
+  if (has("gracias","genial","perfecto","muy bien","guay")) return botMsg(pick(["¡De nada! Para eso estoy.", "¡A ti! ¿Algo más?", "Un placer. 🤖"]));
+  if (has("chiste","broma")) return botMsg(pick(["¿Por qué el robot cruzó la calle? Porque estaba programado para ello.", "Mi comida favorita son los microchips… con salsa de bytes."]));
+  if (has("adios","hasta luego","chao","agur")) return botMsg("¡Hasta luego! Aquí estaré cuando me necesites.");
+  botMsg(pick(["Mmm, no te he entendido. Prueba con «necesito un sensor» o «prepárame el kit del brazo».", "No sé qué componente es ese. Tengo sensores, servomotores, baterías y microprocesadores."]));
+}
+$("chatform").onsubmit = e => { e.preventDefault(); const v = $("chatinput").value; $("chatinput").value = ""; handleUtterance(v); };
+["Lagun, preséntate", "Hola Lagun", "Necesito algo para medir distancias", "Prepárame el kit del brazo", "¿Qué puedes hacer?", "¿Cuánto stock queda?"].forEach(q => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = q; b.onclick = () => handleUtterance(q); $("sugg").appendChild(b);
+});
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) { $("mic").disabled = true; $("mic").textContent = "🎤 Voz no disponible (usa Chrome)"; $("talk").disabled = true; }
+else {
+  const rec = new SR(); rec.lang = "es-ES"; rec.interimResults = false; rec.maxAlternatives = 3;
+  rec.onresult = e => {
+    const said = e.results[0][0].transcript;
+    $("heard").textContent = `Has dicho: «${said}»`;
+    log(`Voz: ${Array.from(e.results[0]).map(a => a.transcript).join(" | ")}`);
+    handleUtterance(said);
+  };
+  rec.onerror = e => {
+    const msgs = { "not-allowed":"El navegador no deja usar el micrófono: permítelo en el candado de la barra de direcciones.",
+                   "no-speech":"No he oído nada. Pulsa y habla justo después.", "network":"La voz necesita internet.",
+                   "audio-capture":"No se encuentra micrófono." };
+    $("heard").textContent = msgs[e.error] || ("Error de voz: " + e.error);
+  };
+  rec.onend = () => { $("mic").classList.remove("on"); $("talk").classList.remove("on"); if (!active) setBotState("Listo para ayudarte"); };
+  const listen = btn => { speechSynthesis.cancel(); btn.classList.add("on"); $("heard").textContent = "Escuchando…"; setBotState("Te escucho…", "listening"); try { rec.start(); } catch {} };
+  $("mic").onclick = () => listen($("mic"));
+  $("talk").onclick = () => listen($("talk"));
+}
+
+let skin = store.get("skin", "neonclaro"); if (skin !== "neon" && skin !== "neonclaro") skin = "neonclaro";
+function applySkin(){ document.body.dataset.skin = skin; $("skin").textContent = skin === "neon" ? "☀️ Modo claro" : "🌙 Modo oscuro"; store.set("skin", skin); }
+$("skin").onclick = () => { skin = skin === "neon" ? "neonclaro" : "neon"; applySkin(); };
+applySkin();
+renderTheme();
+renderAll();
+loadModels();
+botMsg("¡Hola! Soy Lagun 🤖, el asistente del almacén. Pídeme un componente o un kit, por voz o escribiendo.", false);
+setInterval(() => { if (!active && !S.sim()) loadModels(); }, 30000);
+</script>
+</body>
+</html>
