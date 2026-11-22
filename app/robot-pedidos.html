@@ -626,6 +626,9 @@ const THEME_KITS = {
       words:["contraste"], parts:["negro","rojo"] },
   ],
 };
+const PICK_FIRST = ["rojo"];   // piezas que hay que coger antes que las demás (al coger el azul se mueve el rojo)
+const pickOrder = parts => [...parts.filter(c => PICK_FIRST.includes(c)), ...parts.filter(c => !PICK_FIRST.includes(c))];
+Object.values(THEME_KITS).forEach(list => list.forEach(k => { k.parts = pickOrder(k.parts); }));
 const kits = () => THEME_KITS[themeKey] || THEME_KITS.almacen;
 let kitRun = null;   // { kit, ids:Set, done:number, total:number }
 
@@ -914,7 +917,7 @@ function requestKit(id) {
   kitRun = { kit:k, ids:new Set(), done:0, total:k.parts.length };
   say(`Preparando ${k.name}: ${k.parts.length} componentes`);
   toast(`${k.icon} ${k.name}: ${k.parts.length} componentes en cola`);
-  k.parts.forEach(c => { const o = { color:c, id:Date.now() + Math.random(), kit:k.id }; kitRun.ids.add(o.id); queue.push(o); });
+  pickOrder(k.parts).forEach(c => { const o = { color:c, id:Date.now() + Math.random(), kit:k.id }; kitRun.ids.add(o.id); queue.push(o); });
   renderQueue(); renderKits(); next();
 }
 function kitStep(order, delivered) {
